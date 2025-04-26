@@ -25,13 +25,13 @@ class DiscountCard extends StatelessWidget {
     final daysRemaining = discount.daysRemaining();
     final cardWidget = _buildCardContent(context, isExpired, daysRemaining);
     
-    // Apply animations conditionally
+    // Apply animations conditionally with more stable curves
     return showAnimation 
         ? cardWidget
             .animate()
-            .fadeIn(duration: 400.ms, curve: Curves.easeOutQuad)
-            .slideY(begin: 0.2, end: 0, duration: 500.ms, curve: Curves.easeOutQuad)
-            .scaleXY(begin: 0.95, end: 1.0, duration: 400.ms) 
+            .fadeIn(duration: 400.ms, curve: Curves.easeOut)
+            .slideY(begin: 0.2, end: 0, duration: 500.ms, curve: Curves.easeOut)
+            .scaleXY(begin: 0.95, end: 1.0, duration: 400.ms, curve: Curves.easeOut) 
         : cardWidget;
   }
 
