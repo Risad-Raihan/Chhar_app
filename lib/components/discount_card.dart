@@ -30,8 +30,8 @@ class DiscountCard extends StatelessWidget {
         ? cardWidget
             .animate()
             .fadeIn(duration: 400.ms, curve: Curves.easeOut)
-            .slideY(begin: 0.2, end: 0, duration: 500.ms, curve: Curves.easeOut)
-            .scaleXY(begin: 0.95, end: 1.0, duration: 400.ms, curve: Curves.easeOut) 
+            .slideY(begin: 0.1, end: 0, duration: 500.ms, curve: Curves.easeOut)
+            .scaleXY(begin: 0.97, end: 1.0, duration: 400.ms, curve: Curves.easeOut) 
         : cardWidget;
   }
 
@@ -202,7 +202,11 @@ class DiscountCard extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: CachedNetworkImage(
-                    imageUrl: discount.storeLogoUrl!,
+                    imageUrl: discount.storeLogoUrl!.startsWith('http')
+                      ? discount.storeLogoUrl!
+                      : discount.storeLogoUrl!.startsWith('//')
+                        ? 'https:${discount.storeLogoUrl!}'
+                        : 'https://${discount.storeLogoUrl!}',
                     height: 40,
                     width: 40,
                     fit: BoxFit.cover,
@@ -219,10 +223,13 @@ class DiscountCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    errorWidget: (context, url, error) => Container(
-                      color: AppColors.surfaceColor,
-                      child: const Icon(Icons.store, color: AppColors.textSecondaryColor),
-                    ),
+                    errorWidget: (context, url, error) {
+                      print('Error loading store logo: $error for URL: $url');
+                      return Container(
+                        color: AppColors.surfaceColor,
+                        child: const Icon(Icons.store, color: AppColors.textSecondaryColor),
+                      );
+                    },
                   ),
                 ),
               
@@ -267,7 +274,7 @@ class DiscountCard extends StatelessWidget {
           
           // Description with proper constraints
           Text(
-            discount.description,
+            discount.displayDescription,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: isExpired ? Colors.grey : null,
             ),

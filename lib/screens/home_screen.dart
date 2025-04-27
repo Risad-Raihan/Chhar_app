@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:async';
 import '../models/category.dart';
 import '../models/store.dart';
@@ -18,6 +17,7 @@ import 'discount_detail_screen.dart';
 import 'store_detail_screen.dart';
 import 'category_detail_screen.dart';
 import 'package:flutter/foundation.dart' hide Category;
+import 'dart:math' as Math;
 
 // Data result class for isolate computation
 class DataResult {
@@ -81,6 +81,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       _isDiscountsLoading = true;
       _error = null;
     });
+    
+    // Reset animation controller to avoid animation exceptions
+    _controller.reset();
 
     try {
       // Use try/catch here for better error handling on the main thread
@@ -125,7 +128,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           _isDiscountsLoading = false;
           _isLoading = false;
         });
-        _controller.forward();
+        
+        // Make sure controller is at 0 position before forwarding
+        if (!_controller.isAnimating) {
+          _controller.reset();
+          _controller.forward();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -297,11 +305,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // TODO: Implement add discount functionality
+          // Use this for testing images
+          _testImageLoading();
         },
         backgroundColor: AppColors.accentMagenta,
-        tooltip: 'Add Discount',
-        child: const Icon(Icons.add),
+        tooltip: 'Test Images',
+        child: const Icon(Icons.image),
       ),
     );
   }
@@ -405,7 +414,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
         ],
       ),
-    ).animate().fadeIn(duration: 500.ms);
+    );
   }
   
   Widget _buildWelcomeHeader() {
@@ -432,8 +441,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
         ],
       ),
-    ).animate(controller: _controller)
-      .fadeIn(duration: 300.ms);
+    );
   }
   
   Widget _buildSearchCardsSection() {
@@ -603,8 +611,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 ),
         ),
       ),
-    ).animate(controller: _controller)
-      .fadeIn(delay: Duration(milliseconds: delay), duration: 300.ms);
+    );
   }
   
   IconData _getIconForType(String type) {
@@ -644,7 +651,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       itemCount: _featuredStores.length,
                       itemBuilder: (context, index) {
                         final store = _featuredStores[index];
-                        return _buildStoreCard(store, index);
+                        return _buildStoreCard(context, store, index);
                       },
                     ),
                   ),
@@ -677,7 +684,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildStoreCard(Store store, int index) {
+  Widget _buildStoreCard(BuildContext context, Store store, int index) {
+    print('Building store card for: ${store.name}, logoUrl: ${store.logoUrl}');
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -713,20 +721,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 shape: BoxShape.circle,
               ),
               clipBehavior: Clip.antiAlias,
-              child: store.logo != null && store.logo!.isNotEmpty
+              child: store.logoUrl != null && store.logoUrl!.isNotEmpty
                   ? CachedNetworkImage(
-                      imageUrl: store.logo!,
+                      imageUrl: store.logoUrl!,
                       fit: BoxFit.cover,
-                      placeholder: (context, url) => const Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentMagenta),
+                      placeholder: (context, url) => Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
+                          ),
                         ),
                       ),
-                      errorWidget: (context, url, error) => const Icon(
-                        Icons.store,
-                        color: AppColors.accentMagenta,
-                      ),
+                      errorWidget: (context, url, error) {
+                        print('Error loading store image: $error for URL: $url');
+                        return const Icon(
+                          Icons.store,
+                          color: AppColors.accentMagenta,
+                          size: 30,
+                        );
+                      },
+                      // Add image format specific handling
+                      fadeInDuration: const Duration(milliseconds: 300),
+                      memCacheHeight: 140, // Optimize cache size
+                      memCacheWidth: 140,
                     )
                   : const Icon(
                       Icons.store,
@@ -752,11 +772,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ],
         ),
       ),
-    ).animate(controller: _controller)
-      .fadeIn(
-        delay: Duration(milliseconds: 400 + (index * 50)), 
-        duration: const Duration(milliseconds: 300),
-      );
+    );
   }
 
   Widget _buildFeaturedDiscountsSection() {
@@ -851,7 +867,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       itemCount: _categories.length,
                       itemBuilder: (context, index) {
                         final category = _categories[index];
-                        return _buildCategoryItem(category, index);
+                        return _buildCategoryItem(context, category, index);
                       },
                     ),
                   ),
@@ -883,8 +899,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
   
-  Widget _buildCategoryItem(Category category, int index) {
-    // Get a vibrant color based on index for category display
+  Widget _buildCategoryItem(BuildContext context, Category category, int index) {
     final List<Color> categoryColors = [
       AppColors.accentTeal,
       AppColors.accentOrange,
@@ -954,11 +969,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ],
         ),
       ),
-    ).animate(controller: _controller)
-      .fadeIn(
-        delay: Duration(milliseconds: 800 + (index * 50)), 
-        duration: 300.ms,
-      );
+    );
   }
   
   IconData _getCategoryIcon(String categoryName) {
@@ -1006,8 +1017,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
         ),
       ],
-    ).animate(controller: _controller)
-      .fadeIn(delay: Duration(milliseconds: delay), duration: 300.ms);
+    );
   }
   
   Widget _buildEmptyStateMessage(String message) {
@@ -1032,8 +1042,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ],
         ),
       ),
-    ).animate(controller: _controller)
-      .fadeIn(duration: 300.ms);
+    );
   }
 
   Widget _buildDiscountCard(Discount discount, int index) {
@@ -1077,19 +1086,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: CachedNetworkImage(
-                      imageUrl: discount.imageUrl!,
+                      imageUrl: discount.imageUrl!.startsWith('http') 
+                          ? discount.imageUrl! 
+                          : discount.imageUrl!.startsWith('//')
+                              ? 'https:${discount.imageUrl!}'
+                              : 'https://${discount.imageUrl!}',
                       fit: BoxFit.cover,
-                      placeholder: (context, url) => const Center(
+                      placeholder: (context, url) => Center(
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentMagenta),
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
                         ),
                       ),
-                      errorWidget: (context, url, error) => const Icon(
-                        Icons.local_offer,
-                        color: AppColors.accentMagenta,
-                        size: 40,
-                      ),
+                      errorWidget: (context, url, error) {
+                        print('Error loading discount image: $error for URL: $url');
+                        return const Icon(
+                          Icons.local_offer,
+                          color: AppColors.accentMagenta,
+                          size: 40,
+                        );
+                      },
                     ),
                   )
                 : const Icon(
@@ -1116,11 +1132,51 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ],
         ),
       ),
-    ).animate(controller: _controller)
-      .fadeIn(
-        delay: Duration(milliseconds: 400 + (index * 50)), 
-        duration: const Duration(milliseconds: 300),
+    );
+  }
+
+  // New test method to debug image loading
+  void _testImageLoading() async {
+    try {
+      // Test direct image loading
+      final testUrl = 'https://via.placeholder.com/150';
+      final snackBar = SnackBar(
+        content: Text('Testing image loading from: $testUrl'),
+        duration: const Duration(seconds: 5),
       );
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      
+      print('Testing image loading capabilities');
+      print('Test URL: $testUrl');
+      
+      // Test Contentful directly to examine store data
+      final contentfulService = ContentfulService();
+      print('\n=== CONTENTFUL STORE TEST ===');
+      final stores = await contentfulService.getStores();
+      
+      print('Fetched ${stores.length} stores from Contentful');
+      for (var store in stores) {
+        print('Store: ${store.name}, Logo URL: ${store.logoUrl}');
+      }
+      
+      // Test loading images directly 
+      if (stores.isNotEmpty) {
+        final storeNames = stores.map((s) => s.name).join(', ');
+        final infoSnackBar = SnackBar(
+          content: Text('Testing stores: $storeNames'),
+          duration: const Duration(seconds: 5),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(infoSnackBar);
+      }
+      
+      // Also test Contentful connection
+      _testDiscounts();
+    } catch (e) {
+      print('Error in image test: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Image test error: $e')),
+      );
+    }
   }
 
   // Debug function to directly test discounts
@@ -1151,6 +1207,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       print('All discount titles:');
       for (var d in discounts) {
         print('${d.title} - featured: ${d.featured}, expired: ${d.isExpired}, active: ${d.active}');
+        print('  Image URL: ${d.imageUrl}');
       }
       
     } catch (e) {

@@ -8,6 +8,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:lottie/lottie.dart' hide Marker;
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/store.dart';
 import '../providers/category_provider.dart';
 import '../services/contentful_service.dart';
@@ -310,7 +311,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> with Ticker
           position: google_maps_flutter.LatLng(store.latitude!, store.longitude!),
           infoWindow: google_maps_flutter.InfoWindow(
             title: store.name,
-            snippet: store.description,
+            snippet: store.displayDescription,
             onTap: () {
               Navigator.push(
                 context,
@@ -654,11 +655,16 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> with Ticker
                       color: AppColors.surfaceColor,
                       child: store.logoUrl != null && store.logoUrl!.isNotEmpty
                           ? Image.network(
-                              store.logoUrl!,
+                              store.logoUrl!.startsWith('http')
+                                  ? store.logoUrl!
+                                  : 'https:${store.logoUrl!}',
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => const Center(
-                                child: Icon(Icons.image_not_supported, size: 40, color: Colors.grey),
-                              ),
+                              errorBuilder: (context, error, stackTrace) {
+                                print('Error loading store image in location search: $error for URL: ${store.logoUrl}');
+                                return const Center(
+                                  child: Icon(Icons.store, size: 40, color: Colors.grey),
+                                );
+                              },
                             )
                           : const Center(
                               child: Icon(Icons.store, size: 40, color: Colors.grey),
@@ -750,16 +756,16 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> with Ticker
                             color: AppColors.accentTeal.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: FutureBuilder<List<String>>(
-                            future: Provider.of<CategoryProvider>(context, listen: false)
-                                .getCategoryNames(store.categoryIds),
-                            builder: (context, snapshot) {
-                              final categoryName = snapshot.hasData && snapshot.data!.isNotEmpty 
-                                  ? snapshot.data!.join(', ') 
+                          child: Consumer<CategoryProvider>(
+                            builder: (context, categoryProvider, _) {
+                              // Use the synchronous method to avoid state changes during build
+                              final categoryNames = categoryProvider.getCategoryNamesSync(store.categoryIds);
+                              final displayName = categoryNames.isNotEmpty 
+                                  ? categoryNames.first
                                   : 'General';
                               
                               return Text(
-                                categoryName,
+                                displayName,
                                 style: const TextStyle(
                                   color: AppColors.accentTeal,
                                   fontSize: 12,
@@ -773,7 +779,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> with Ticker
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      store.description,
+                      store.displayDescription,
                       style: TextStyle(
                         color: Colors.grey[600],
                         fontSize: 14,

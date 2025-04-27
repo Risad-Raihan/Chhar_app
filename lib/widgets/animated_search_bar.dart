@@ -218,7 +218,7 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> {
                   )
                 .animate()
                 .fadeIn(duration: 300.ms)
-                .slideY(begin: 0.2, end: 0),
+                .slideY(begin: 0.1, end: 0),
                 ),
               
               // Error Message (with animation)
@@ -248,7 +248,7 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> {
                       ),
                     ],
                   ),
-                ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.2, end: 0),
+                ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0),
             ],
           ),
         ),

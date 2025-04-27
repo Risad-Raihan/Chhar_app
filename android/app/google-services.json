@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "116492105724",
+    "project_id": "chhar-app",
+    "storage_bucket": "chhar-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:116492105724:android:bad2fc800fa002562d6479",
+        "android_client_info": {
+          "package_name": "com.example.chhar"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "116492105724-7e5c9rhsm191kfpj9ns2dr33o146v7b2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDF0ACOo8QZ5a7j3v2pcCfJMjQLGeOEAeQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "116492105724-7e5c9rhsm191kfpj9ns2dr33o146v7b2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

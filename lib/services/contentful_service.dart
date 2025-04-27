@@ -16,7 +16,7 @@ class ContentfulService {
 
   // Hardcoded values as fallback
   static const String hardcodedSpaceId = 'dm9oug4ckfgv';
-  static const String hardcodedAccessToken = '5G9g0dPXgfS5L9fyG-yJ4QyGNnIUEFrJ7gkx9kiEFec';
+  static const String hardcodedAccessToken = 'Unp4wnUCiGanzC64e_9TyzucoF53yyFvmQ42sOt68O0';
 
   static final ContentfulService _instance = ContentfulService._internal(
     spaceId: _getEnvOrEmpty('CONTENTFUL_SPACE_ID'),
@@ -80,8 +80,8 @@ class ContentfulService {
 
   Future<Map<String, dynamic>> _get(String endpoint, {Map<String, String>? queryParams}) async {
     // Use hardcoded values if configured values are empty
-    final effectiveSpaceId = spaceId.isEmpty ? hardcodedSpaceId : spaceId;
-    final effectiveAccessToken = accessToken.isEmpty ? hardcodedAccessToken : accessToken;
+    final effectiveSpaceId = spaceId.isEmpty ? hardcodedSpaceId : spaceId.replaceAll('`', '');
+    final effectiveAccessToken = accessToken.isEmpty ? hardcodedAccessToken : accessToken.replaceAll('`', '');
     
     if (effectiveSpaceId.isEmpty || effectiveAccessToken.isEmpty) {
       print('WARNING: Using mock data because Contentful credentials are still missing');
@@ -289,26 +289,80 @@ class ContentfulService {
   Future<List<Store>> getStores({String? categoryId}) async {
     final queryParams = {
       'content_type': 'store',
-      'include': '2', // Include linked assets (like images) in the response
+      'include': '3', // Increase include depth to ensure linked assets are retrieved
     };
     
     if (categoryId != null) {
       queryParams['fields.categories.sys.id'] = categoryId;
     }
 
+    print('Fetching stores with params: $queryParams');
     final data = await _get('entries', queryParams: queryParams);
     
     final List<Store> stores = [];
     
-    if (data.containsKey('items')) {
-      for (var item in data['items']) {
-        try {
-          stores.add(Store.fromContentful(item));
-        } catch (e) {
-          print('Error parsing store: $e');
+    // Check for includes first
+    if (data.containsKey('includes')) {
+      print('Includes found in Contentful response: ${data['includes'].keys}');
+      
+      if (data['includes'] is Map && data['includes'].containsKey('Asset')) {
+        final assets = data['includes']['Asset'];
+        print('Found ${assets.length} assets in includes');
+        
+        // Print sample asset structure
+        if (assets.isNotEmpty) {
+          print('Sample asset structure: ${assets.first}');
         }
       }
+    } else {
+      print('No includes found in Contentful response');
     }
+    
+    if (data.containsKey('items')) {
+      print('Found ${data['items'].length} stores in Contentful response');
+      
+      for (var item in data['items']) {
+        try {
+          // Log raw store data for debugging
+          print('Processing store: ${item['fields']['name']}');
+          if (item['fields'].containsKey('logo')) {
+            print('  - Logo data: ${item['fields']['logo']}');
+          } else {
+            print('  - No logo field found');
+          }
+          
+          if (item['fields'].containsKey('location')) {
+            print('  - Location data: ${item['fields']['location']}');
+          } else {
+            print('  - No location data found');
+          }
+          
+          final store = Store.fromContentful(item);
+          print('  - Store ID: ${store.id}, Name: ${store.name}, hasLocation: ${store.hasLocation}, hasLogo: ${store.logoUrl != null}');
+          if (store.hasLocation) {
+            print('  - Coordinates: ${store.latitude}, ${store.longitude}');
+          }
+          if (store.logoUrl != null) {
+            print('  - Logo URL: ${store.logoUrl}');
+          }
+          
+          stores.add(store);
+        } catch (e) {
+          print('Error parsing store: $e');
+          print('Raw store data: ${item['fields']}');
+        }
+      }
+    } else {
+      print('No stores found in Contentful response');
+    }
+    
+    // Log stores with locations
+    final storesWithLocation = stores.where((store) => store.hasLocation).toList();
+    print('Found ${stores.length} total stores, ${storesWithLocation.length} with valid location data');
+    
+    // Log stores with logos
+    final storesWithLogos = stores.where((store) => store.logoUrl != null).toList();
+    print('Found ${storesWithLogos.length} stores with valid logo images');
     
     return stores;
   }

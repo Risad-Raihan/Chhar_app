@@ -45,41 +45,44 @@ class DefaultFirebaseOptions {
     }
   }
 
-  // Web configuration - you'll need to add this from Firebase console if needed
+  // Web configuration for the new Chhar project
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCGA3hsouhjWlO1wLgKamNXHFezx0yIfRI',
-    appId: '1:1076421018451:android:1db468b2c48376379497a6',
-    messagingSenderId: '1076421018451',
-    projectId: 'discount-hub-13c18',
-    authDomain: 'discount-hub-13c18.firebaseapp.com',
-    storageBucket: 'discount-hub-13c18.firebasestorage.app',
+    apiKey: 'AIzaSyDF0ACOo8QZ5a7j3v2pcCfJMjQLGeOEAeQ',
+    appId: '1:116492105724:web:57bee91a8c063c85cba30c',
+    messagingSenderId: '116492105724',
+    projectId: 'chhar-app',
+    authDomain: 'chhar-app.firebaseapp.com',
+    storageBucket: 'chhar-app.appspot.com',
   );
 
+  // Android configuration for the new Chhar project
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCGA3hsouhjWlO1wLgKamNXHFezx0yIfRI',
-    appId: '1:1076421018451:android:1db468b2c48376379497a6',
-    messagingSenderId: '1076421018451',
-    projectId: 'discount-hub-13c18',
-    storageBucket: 'discount-hub-13c18.appspot.com',
+    apiKey: 'AIzaSyDF0ACOo8QZ5a7j3v2pcCfJMjQLGeOEAeQ',
+    appId: '1:116492105724:android:bad2fc800fa00256d6479',
+    messagingSenderId: '116492105724',
+    projectId: 'chhar-app',
+    storageBucket: 'chhar-app.appspot.com',
   );
 
+  // iOS configuration for the new Chhar project
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCGA3hsouhjWlO1wLgKamNXHFezx0yIfRI',
-    appId: '1:1076421018451:android:1db468b2c48376379497a6',
-    messagingSenderId: '1076421018451',
-    projectId: 'discount-hub-13c18',
-    storageBucket: 'discount-hub-13c18.firebasestorage.app',
-    iosClientId: '1076421018451-ios-client-id', // You'll need to update this with actual iOS client ID
-    iosBundleId: 'com.chhar.discountApp',
+    apiKey: 'AIzaSyDF0ACOo8QZ5a7j3v2pcCfJMjQLGeOEAeQ',
+    appId: '1:116492105724:ios:5e7e3a92c88b5ce5cba30c',
+    messagingSenderId: '116492105724',
+    projectId: 'chhar-app',
+    storageBucket: 'chhar-app.appspot.com',
+    iosClientId: '116492105724-ios-client-id', // You'll need to update this with actual iOS client ID
+    iosBundleId: 'com.example.chhar',
   );
 
+  // macOS configuration for the new Chhar project
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCGA3hsouhjWlO1wLgKamNXHFezx0yIfRI',
-    appId: '1:1076421018451:android:1db468b2c48376379497a6',
-    messagingSenderId: '1076421018451',
-    projectId: 'discount-hub-13c18',
-    storageBucket: 'discount-hub-13c18.firebasestorage.app',
-    iosClientId: '1076421018451-ios-client-id', // You'll need to update this with actual iOS client ID
-    iosBundleId: 'com.chhar.discountApp',
+    apiKey: 'AIzaSyDF0ACOo8QZ5a7j3v2pcCfJMjQLGeOEAeQ',
+    appId: '1:116492105724:ios:5e7e3a92c88b5ce5cba30c',
+    messagingSenderId: '116492105724',
+    projectId: 'chhar-app',
+    storageBucket: 'chhar-app.appspot.com',
+    iosClientId: '116492105724-ios-client-id', // You'll need to update this with actual iOS client ID
+    iosBundleId: 'com.example.chhar',
   );
 } 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart' as dotenv;
+import 'package:google_fonts/google_fonts.dart';
 import 'firebase_options.dart';
 import 'screens/main_screen.dart';
 import 'screens/login_screen.dart';
@@ -20,7 +21,7 @@ void main() async {
   // You should replace these with your actual Contentful credentials
   // and then load from .env for production
   const String hardcodedSpaceId = 'dm9oug4ckfgv';  // Space ID from logs
-  const String hardcodedAccessToken = 'YOUR_ACCESS_TOKEN_HERE';  // Replace with your actual access token
+  const String hardcodedAccessToken = 'Unp4wnUCiGanzC64e_9TyzucoF53yyFvmQ42sOt68O0';  // Updated access token
   
   // Load environment variables from .env file
   try {
@@ -182,6 +183,9 @@ class AuthWrapper extends StatelessWidget {
 // Custom theme settings for the app
 class AppTheme {
   static ThemeData get darkTheme {
+    // Print debug info for image loading
+    debugPrint('Initializing app theme with image configuration');
+    
     return ThemeData.dark().copyWith(
       scaffoldBackgroundColor: AppColors.backgroundColor,
       cardColor: AppColors.cardColor,
@@ -193,17 +197,19 @@ class AppTheme {
         error: AppColors.errorColor,
       ),
       visualDensity: VisualDensity.adaptivePlatformDensity,
-      textTheme: ThemeData.dark().textTheme.apply(
-        fontFamily: 'Poppins',
+      textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme).apply(
+        fontFamily: 'Outfit',
+        fontFamilyFallback: ['NotoSansBengali'],
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: AppColors.cardColor,
         elevation: 0,
-        titleTextStyle: TextStyle(
-          color: AppColors.textPrimaryColor,
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          fontFamily: 'Poppins',
+        titleTextStyle: GoogleFonts.outfit(
+          textStyle: const TextStyle(
+            color: AppColors.textPrimaryColor,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );

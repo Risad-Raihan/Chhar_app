@@ -1,4 +1,4 @@
-# chhar
+f$env:Path += ";E:\flutter\bin"# chhar
 
 A new Flutter project.
 

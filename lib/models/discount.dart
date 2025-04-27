@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 class Discount {
   final String id;
   final String title;
-  final String description;
+  final String? description;
   final double discountPercentage;
   final String? code;
   final String storeId;
@@ -19,11 +19,14 @@ class Discount {
   // Add these getters for backward compatibility
   String get store => storeId;
   String get category => categoryId;
+  
+  // Add a getter to get description from fullDescription if description is null
+  String get displayDescription => description ?? fullDescription ?? '';
 
   Discount({
     required this.id,
     required this.title,
-    required this.description,
+    this.description,
     required this.discountPercentage,
     this.code,
     required this.storeId,
@@ -78,9 +81,13 @@ class Discount {
       throw Exception('Discount is missing a title');
     }
     
-    if (!fields.containsKey('description') || 
-        fields['description'] == null) {
-      throw Exception('Discount is missing a description');
+    // Remove the description validation since it's now optional
+    // Use fullDescription as description if available
+    String? description;
+    if (fields.containsKey('description') && fields['description'] != null) {
+      description = fields['description'];
+    } else if (fields.containsKey('fullDescription') && fields['fullDescription'] != null) {
+      description = fields['fullDescription'];
     }
     
     DateTime expiry = DateTime.now().add(const Duration(days: 30)); // Default expiry
@@ -203,7 +210,7 @@ class Discount {
     return Discount(
       id: entry['sys']['id'],
       title: fields['title'],
-      description: fields['description'],
+      description: description,
       discountPercentage: discountPercentage,
       code: fields['code'],
       storeId: storeId,

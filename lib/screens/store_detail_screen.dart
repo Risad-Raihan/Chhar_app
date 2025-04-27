@@ -20,6 +20,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
   List<Discount> _discounts = [];
   bool _isLoading = true;
   String? _error;
+  int _retryCount = 0;
+  final int _maxRetries = 3;
 
   @override
   void initState() {
@@ -34,17 +36,29 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
     });
 
     try {
+      print('Fetching discounts for store: ${widget.store.id} (${widget.store.name})');
       final discounts = await _contentfulService.getDiscounts(storeId: widget.store.id);
+      print('Fetched ${discounts.length} discounts for ${widget.store.name}');
+      
       setState(() {
         _discounts = discounts;
         _isLoading = false;
       });
     } catch (e) {
+      print('Error fetching store discounts: $e');
+      
+      // Retry mechanism
+      if (_retryCount < _maxRetries) {
+        _retryCount++;
+        print('Retrying fetch discounts (attempt $_retryCount of $_maxRetries)...');
+        await Future.delayed(Duration(seconds: 1));
+        return _fetchStoreDiscounts();
+      }
+      
       setState(() {
         _error = 'Failed to load discounts: $e';
         _isLoading = false;
       });
-      print('Error fetching store discounts: $e');
     }
   }
 
@@ -64,9 +78,33 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
-                    ? Center(child: Text(_error!))
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(_error!),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () {
+                                _retryCount = 0;
+                                _fetchStoreDiscounts();
+                              },
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      )
                     : _discounts.isEmpty
-                        ? const Center(child: Text('No discounts available for this store'))
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text('No discounts available for this store'),
+                                const SizedBox(height: 16),
+                                Text('Store ID: ${widget.store.id}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                              ],
+                            ),
+                          )
                         : ListView.builder(
                             padding: const EdgeInsets.all(16),
                             itemCount: _discounts.length,
@@ -105,15 +143,29 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                 height: 100,
                 width: 100,
                 fit: BoxFit.cover,
-                placeholder: (context, url) => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-                errorWidget: (context, url, error) => Container(
+                fadeInDuration: const Duration(milliseconds: 300),
+                memCacheHeight: 200,
+                memCacheWidth: 200,
+                placeholder: (context, url) => Container(
                   height: 100,
                   width: 100,
                   color: AppColors.surfaceColor,
-                  child: const Icon(Icons.store, size: 50),
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
+                    ),
+                  ),
                 ),
+                errorWidget: (context, url, error) {
+                  print('Error loading store logo in detail screen: $error for URL: $url');
+                  return Container(
+                    height: 100,
+                    width: 100,
+                    color: AppColors.surfaceColor,
+                    child: const Icon(Icons.store, size: 50),
+                  );
+                },
               ),
             )
           else
@@ -142,9 +194,9 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
           const SizedBox(height: 8),
           
           // Store Description
-          if (widget.store.description.isNotEmpty)
+          if (widget.store.description != null && widget.store.description!.isNotEmpty)
             Text(
-              widget.store.description,
+              widget.store.displayDescription,
               style: const TextStyle(fontSize: 16),
               textAlign: TextAlign.center,
             ),
@@ -189,21 +241,21 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
             if (discount.imageUrl != null)
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                child: CachedNetworkImage(
-                  imageUrl: discount.imageUrl!,
+                child: Image.network(
+                  discount.imageUrl!.startsWith('http')
+                      ? discount.imageUrl!
+                      : 'https:${discount.imageUrl!}',
                   height: 150,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    height: 150,
-                    color: AppColors.surfaceColor,
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    height: 150,
-                    color: AppColors.surfaceColor,
-                    child: const Icon(Icons.image_not_supported, size: 50),
-                  ),
+                  errorBuilder: (context, error, stackTrace) {
+                    print('Error loading discount image in store detail: $error for URL: ${discount.imageUrl}');
+                    return Container(
+                      height: 150,
+                      color: AppColors.surfaceColor,
+                      child: const Icon(Icons.image_not_supported, size: 50),
+                    );
+                  },
                 ),
               ),
             
@@ -263,7 +315,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                   
                   // Discount Description (truncated)
                   Text(
-                    discount.description,
+                    discount.displayDescription,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 14),

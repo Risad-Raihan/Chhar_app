@@ -71,31 +71,29 @@ class _DiscountDetailScreenState extends State<DiscountDetailScreen> {
           children: [
             // Discount Image
             if (widget.discount.imageUrl != null)
-              CachedNetworkImage(
-                imageUrl: widget.discount.imageUrl!.startsWith('http')
+              Image.network(
+                widget.discount.imageUrl!.startsWith('http')
                     ? widget.discount.imageUrl!
                     : 'https:${widget.discount.imageUrl!}',
                 height: 250,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  height: 250,
-                  color: AppColors.surfaceColor,
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  height: 250,
-                  color: AppColors.surfaceColor,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.image_not_supported, size: 80),
-                      const SizedBox(height: 8),
-                      Text('Failed to load image: $url'),
-                      Text('Error: $error', style: const TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
+                errorBuilder: (context, error, stackTrace) {
+                  print('Error loading discount image in detail: $error for URL: ${widget.discount.imageUrl}');
+                  return Container(
+                    height: 250,
+                    color: AppColors.surfaceColor,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.image_not_supported, size: 80),
+                        const SizedBox(height: 8),
+                        Text('Failed to load image: ${widget.discount.imageUrl}'),
+                        Text('Error: $error', style: const TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  );
+                },
               )
             else
               Container(
@@ -275,9 +273,7 @@ class _DiscountDetailScreenState extends State<DiscountDetailScreen> {
                   
                   // Display full description if available, otherwise use the short description
                   Text(
-                    widget.discount.fullDescription != null && widget.discount.fullDescription!.isNotEmpty
-                        ? widget.discount.fullDescription!
-                        : widget.discount.description,
+                    widget.discount.displayDescription,
                     style: const TextStyle(
                       fontSize: 16,
                       height: 1.5,
