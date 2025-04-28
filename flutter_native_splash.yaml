@@ -1,0 +1,19 @@
+# flutter_native_splash:
+#   # Background color of the splash screen
+#   color: "#121212"
+#   # Or background image
+#   #background_image: "assets/splash_background.png"
+#   
+#   # Image that appears in the center of the splash screen
+#   image: assets/images/splash_logo.png
+#   
+#   # Branding image at the bottom
+#   #branding: assets/branding.png
+#   
+#   # Optional animation
+#   android_12:
+#     image: assets/images/splash_logo.png
+#     color: "#121212"
+#   
+#   # Positioning
+#   fullscreen: true 
