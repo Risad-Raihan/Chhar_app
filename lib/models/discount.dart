@@ -59,169 +59,149 @@ class Discount {
     return daysLeft;
   }
 
-  factory Discount.fromContentful(Map<String, dynamic> entry) {
+  factory Discount.fromContentful(Map<String, dynamic> entry, [Map<String, dynamic>? includes]) {
     final fields = entry['fields'] as Map<String, dynamic>;
-    final id = entry['sys']?['id'] as String? ?? '';
+    final id = entry['sys']['id'];
     
-    // Check for mock data by ID or titles
-    if (id == 'disc1' || id == 'disc2' || id == 'disc3') {
-      throw Exception('Refusing to create discount from mock data (mock ID detected)');
-    }
-    
-    final title = fields['title'] as String? ?? '';
-    if (title == 'Flash Sale' || title == 'New User Special' || title == 'Limited Time Offer') {
-      // These are known mock data titles
-      throw Exception('Refusing to create discount from suspected mock data (title: $title)');
+    // Extract store ID
+    String? storeId;
+    if (fields.containsKey('store') && fields['store'] is Map && 
+        fields['store'].containsKey('sys') && fields['store']['sys'] is Map &&
+        fields['store']['sys'].containsKey('id')) {
+      storeId = fields['store']['sys']['id'];
     }
     
-    // Required fields - validate that they exist and have valid values
-    if (!fields.containsKey('title') || 
-        fields['title'] == null || 
-        fields['title'].toString().trim().isEmpty) {
-      throw Exception('Discount is missing a title');
+    // Extract category ID
+    String? categoryId;
+    if (fields.containsKey('category') && fields['category'] is Map && 
+        fields['category'].containsKey('sys') && fields['category']['sys'] is Map &&
+        fields['category']['sys'].containsKey('id')) {
+      categoryId = fields['category']['sys']['id'];
     }
     
-    // Remove the description validation since it's now optional
-    // Use fullDescription as description if available
-    String? description;
-    if (fields.containsKey('description') && fields['description'] != null) {
-      description = fields['description'];
-    } else if (fields.containsKey('fullDescription') && fields['fullDescription'] != null) {
-      description = fields['fullDescription'];
-    }
-    
-    DateTime expiry = DateTime.now().add(const Duration(days: 30)); // Default expiry
-    if (fields.containsKey('expiryDate') && fields['expiryDate'] != null) {
-      try {
-        expiry = DateTime.parse(fields['expiryDate']);
-      } catch (e) {
-        print('Error parsing date: $e');
-      }
-    }
-
-    // Safely extract storeId
-    String storeId = '';
-    if (fields.containsKey('store') && fields['store'] != null) {
-      final storeData = fields['store'];
-      if (storeData is Map && storeData.containsKey('sys')) {
-        final sys = storeData['sys'];
-        if (sys is Map && sys.containsKey('id')) {
-          storeId = sys['id'];
-        }
-      }
-    }
-    
-    if (storeId.isEmpty) {
-      throw Exception('Discount must be associated with a store');
-    }
-    
-    // Safely extract categoryId
-    String categoryId = '';
-    if (fields.containsKey('category') && fields['category'] != null) {
-      final categoryData = fields['category'];
-      if (categoryData is Map && categoryData.containsKey('sys')) {
-        final sys = categoryData['sys'];
-        if (sys is Map && sys.containsKey('id')) {
-          categoryId = sys['id'];
-        }
-      }
-    }
-    
-    if (categoryId.isEmpty) {
-      throw Exception('Discount must be associated with a category');
-    }
-
-    // Safely extract the image URL
+    // Extract image URL
     String? imageUrl;
     if (fields.containsKey('image') && fields['image'] != null) {
       final image = fields['image'];
-      if (image is Map && image.containsKey('fields')) {
-        final imageFields = image['fields'];
-        if (imageFields is Map && imageFields.containsKey('file')) {
-          final file = imageFields['file'];
-          if (file is Map && file.containsKey('url')) {
-            imageUrl = file['url'];
-            // Prepend https: if the URL starts with //
-            if (imageUrl != null && imageUrl.startsWith('//')) {
-              imageUrl = 'https:$imageUrl';
+      
+      // Handle direct URL string
+      if (image is String) {
+        imageUrl = image;
+      } 
+      // Handle asset reference
+      else if (image is Map && image.containsKey('sys') && image['sys'] is Map && image['sys'].containsKey('id')) {
+        final assetId = image['sys']['id'];
+        
+        if (includes != null && includes.containsKey('Asset') && includes['Asset'] is List) {
+          final assets = includes['Asset'] as List;
+          
+          try {
+            for (var asset in assets) {
+              if (asset is Map && 
+                  asset.containsKey('sys') && 
+                  asset['sys'] is Map && 
+                  asset['sys']['id'] == assetId) {
+                
+                if (asset.containsKey('fields') &&
+                    asset['fields'] is Map &&
+                    asset['fields'].containsKey('file') &&
+                    asset['fields']['file'] is Map &&
+                    asset['fields']['file'].containsKey('url')) {
+                  imageUrl = asset['fields']['file']['url'];
+                  print('Processed image for discount: ${fields['title']}');
+                  break;
+                }
+              }
             }
+          } catch (e) {
+            print('Error processing image for discount: $e');
           }
         }
       }
     }
-
-    // Extract fullDescription
-    String? fullDescription;
-    if (fields.containsKey('fullDescription')) {
-      fullDescription = fields['fullDescription'];
+    
+    // Format URL
+    if (imageUrl != null && imageUrl.startsWith('//')) {
+      imageUrl = 'https:$imageUrl';
     }
     
-    // Carefully extract the featured flag
-    bool isFeatured = false;
+    // Handle featured flag
+    bool featured = false;
     if (fields.containsKey('featured')) {
-      final featuredValue = fields['featured'];
-      print('Featured value raw: $featuredValue (${featuredValue.runtimeType})');
-      
-      if (featuredValue is bool) {
-        isFeatured = featuredValue;
-      } else if (featuredValue is String) {
-        isFeatured = featuredValue.toLowerCase() == 'true';
-      } else if (featuredValue is num) {
-        isFeatured = featuredValue != 0;
-      } else if (featuredValue is Map) {
-        // Handle cases where featured might be a reference
-        isFeatured = true; // If it exists as a reference, consider it true
-      }
-    }
-    
-    print('Final featured flag value: $isFeatured');
-    
-    // Extract active status
-    bool isActive = true;
-    if (fields.containsKey('active')) {
-      final activeValue = fields['active'];
-      if (activeValue is bool) {
-        isActive = activeValue;
-      } else if (activeValue is String) {
-        isActive = activeValue.toLowerCase() == 'true';
-      } else if (activeValue is num) {
-        isActive = activeValue != 0;
-      }
-    }
-    
-    // Extract discount percentage
-    double discountPercentage = 0.0;
-    if (fields.containsKey('discountPercentage') && fields['discountPercentage'] != null) {
-      if (fields['discountPercentage'] is int) {
-        discountPercentage = fields['discountPercentage'].toDouble();
-      } else if (fields['discountPercentage'] is double) {
-        discountPercentage = fields['discountPercentage'];
-      } else if (fields['discountPercentage'] is String) {
-        try {
-          discountPercentage = double.parse(fields['discountPercentage']);
-        } catch (e) {
-          print('Error parsing discount percentage: $e');
+      try {
+        final featuredRaw = fields['featured'];
+        print('Raw discount data for ${fields['title']}: featured = $featuredRaw (${featuredRaw.runtimeType})');
+        
+        if (featuredRaw is bool) {
+          featured = featuredRaw;
+          print('Featured value raw: $featuredRaw (bool)');
+        } else if (featuredRaw is String) {
+          featured = featuredRaw.toLowerCase() == 'true';
+          print('Featured value raw: $featuredRaw (String)');
+        } else if (featuredRaw is num) {
+          featured = featuredRaw > 0;
+          print('Featured value raw: $featuredRaw (num)');
         }
+        
+        print('Final featured flag value: $featured');
+      } catch (e) {
+        print('Error parsing featured flag: $e');
       }
     }
     
-    print('Parsed discount ${fields['title']}: featured=$isFeatured, active=$isActive, storeId=$storeId, categoryId=$categoryId');
-
-    return Discount(
-      id: entry['sys']['id'],
-      title: fields['title'],
-      description: description,
-      discountPercentage: discountPercentage,
+    // Handle active flag
+    bool active = true; // Default to active
+    if (fields.containsKey('active')) {
+      try {
+        final activeRaw = fields['active'];
+        
+        if (activeRaw is bool) {
+          active = activeRaw;
+        } else if (activeRaw is String) {
+          active = activeRaw.toLowerCase() == 'true';
+        } else if (activeRaw is num) {
+          active = activeRaw > 0;
+        }
+      } catch (e) {
+        print('Error parsing active flag: $e');
+      }
+    }
+    
+    // Parse expiry date
+    DateTime? expiryDate;
+    if (fields.containsKey('expiryDate') && fields['expiryDate'] != null) {
+      try {
+        if (fields['expiryDate'] is String) {
+          expiryDate = DateTime.parse(fields['expiryDate']);
+        }
+      } catch (e) {
+        print('Error parsing expiry date: $e');
+      }
+    }
+    
+    print('Parsed discount ${fields['title']}: featured=$featured, active=$active, storeId=$storeId, categoryId=$categoryId');
+    
+    final discount = Discount(
+      id: id,
+      title: fields['title'] ?? '',
+      description: fields['description'],
+      discountPercentage: _extractNumber(fields['discountPercentage']),
       code: fields['code'],
-      storeId: storeId,
-      categoryId: categoryId,
-      expiryDate: expiry,
+      storeId: storeId ?? '',
+      categoryId: categoryId ?? '',
+      expiryDate: expiryDate ?? DateTime.now().add(const Duration(days: 30)),
       imageUrl: imageUrl,
-      featured: isFeatured,
-      active: isActive,
-      fullDescription: fullDescription,
+      featured: featured,
+      active: active,
+      fullDescription: fields['fullDescription'],
       storeLogoUrl: fields['storeLogoUrl'],
     );
+    
+    if (discount.featured) {
+      print('Successfully parsed discount: ${discount.title} (featured=true)');
+    }
+    
+    return discount;
   }
 
   // Copy with method for creating a new instance with updated values
@@ -297,5 +277,24 @@ class Discount {
       fullDescription: map['fullDescription'],
       storeLogoUrl: map['storeLogoUrl'],
     );
+  }
+
+  // Helper method to extract numeric values
+  static double _extractNumber(dynamic value) {
+    if (value == null) return 0.0;
+    
+    if (value is int) {
+      return value.toDouble();
+    } else if (value is double) {
+      return value;
+    } else if (value is String) {
+      try {
+        return double.parse(value);
+      } catch (e) {
+        return 0.0;
+      }
+    }
+    
+    return 0.0;
   }
 } 

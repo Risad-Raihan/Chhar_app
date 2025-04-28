@@ -18,34 +18,40 @@ class ContentfulService {
   static const String hardcodedSpaceId = 'dm9oug4ckfgv';
   static const String hardcodedAccessToken = 'Unp4wnUCiGanzC64e_9TyzucoF53yyFvmQ42sOt68O0';
 
-  static final ContentfulService _instance = ContentfulService._internal(
-    spaceId: _getEnvOrEmpty('CONTENTFUL_SPACE_ID'),
-    accessToken: _getEnvOrEmpty('CONTENTFUL_ACCESS_TOKEN'),
-    environment: _getEnvOrEmpty('CONTENTFUL_ENVIRONMENT', defaultValue: 'master'),
-  );
+  // Private static instance for singleton pattern
+  static ContentfulService? _instance;
 
+  // Factory constructor to ensure only one instance is created
   factory ContentfulService({
     String? spaceId,
     String? accessToken,
     String? environment,
   }) {
-    // If custom credentials are provided, create a new instance
-    if (spaceId != null || accessToken != null || environment != null) {
-      return ContentfulService._internal(
-        spaceId: spaceId ?? _getEnvOrEmpty('CONTENTFUL_SPACE_ID'),
-        accessToken: accessToken ?? _getEnvOrEmpty('CONTENTFUL_ACCESS_TOKEN'),
-        environment: environment ?? _getEnvOrEmpty('CONTENTFUL_ENVIRONMENT', defaultValue: 'master'),
-      );
+    // Use the existing instance if available
+    if (_instance != null) {
+      return _instance!;
     }
-    // Otherwise use the singleton instance
-    return _instance;
+
+    // Otherwise, create a new instance with proper parameters
+    final effectiveSpaceId = spaceId ?? dotenv.env['CONTENTFUL_SPACE_ID'] ?? hardcodedSpaceId;
+    final effectiveAccessToken = accessToken ?? dotenv.env['CONTENTFUL_ACCESS_TOKEN'] ?? hardcodedAccessToken;
+    final effectiveEnvironment = environment ?? dotenv.env['CONTENTFUL_ENVIRONMENT'] ?? 'master';
+    
+    _instance = ContentfulService._internal(
+      spaceId: effectiveSpaceId.replaceAll('`', ''), // Remove backticks
+      accessToken: effectiveAccessToken,
+      environment: effectiveEnvironment,
+    );
+    
+    return _instance!;
   }
 
+  // Private constructor for internal use only
   ContentfulService._internal({
     required this.spaceId,
     required this.accessToken,
     required this.environment,
-  }) : useMockData = _shouldUseMockData() {
+  }) : useMockData = false {
     
     // Log actual values being used (masking the access token for security)
     print('ContentfulService initialized with:');
@@ -80,8 +86,8 @@ class ContentfulService {
 
   Future<Map<String, dynamic>> _get(String endpoint, {Map<String, String>? queryParams}) async {
     // Use hardcoded values if configured values are empty
-    final effectiveSpaceId = spaceId.isEmpty ? hardcodedSpaceId : spaceId.replaceAll('`', '');
-    final effectiveAccessToken = accessToken.isEmpty ? hardcodedAccessToken : accessToken.replaceAll('`', '');
+    final effectiveSpaceId = spaceId.isEmpty ? hardcodedSpaceId : spaceId;
+    final effectiveAccessToken = accessToken.isEmpty ? hardcodedAccessToken : accessToken;
     
     if (effectiveSpaceId.isEmpty || effectiveAccessToken.isEmpty) {
       print('WARNING: Using mock data because Contentful credentials are still missing');
@@ -337,7 +343,8 @@ class ContentfulService {
             print('  - No location data found');
           }
           
-          final store = Store.fromContentful(item);
+          // Pass the includes data to the Store.fromContentful method
+          final store = Store.fromContentful(item, data.containsKey('includes') ? data['includes'] : null);
           print('  - Store ID: ${store.id}, Name: ${store.name}, hasLocation: ${store.hasLocation}, hasLogo: ${store.logoUrl != null}');
           if (store.hasLocation) {
             print('  - Coordinates: ${store.latitude}, ${store.longitude}');
@@ -485,75 +492,84 @@ class ContentfulService {
     return discounts;
   }
   
-  // Get featured discounts specifically
+  // Get only featured discounts
   Future<List<Discount>> getFeaturedDiscounts() async {
-    print('Getting featured discounts directly');
+    print('Attempting to fetch featured discounts from Contentful');
     
-    // Try to fetch with the featured parameter directly
     try {
-      // First try directly with a featured=true parameter
-      final queryParams = {
+      // Try to get directly with the featured=true query parameter
+      print('Getting featured discounts directly');
+      print('Fetching directly with fields.featured=true');
+      
+      final params = {
         'content_type': 'discount',
         'include': '2',
-        'fields.featured': 'true', // Try to filter on the server side
+        'fields.featured': 'true',
+        'access_token': accessToken.isEmpty ? hardcodedAccessToken : accessToken,
       };
+
+      final uri = Uri.https(
+        'cdn.contentful.com', 
+        '/spaces/${spaceId.isEmpty ? hardcodedSpaceId : spaceId}/environments/$environment/entries', 
+        params
+      );
       
-      print('Fetching directly with fields.featured=true');
-      final uri = Uri.https('cdn.contentful.com', 
-        '/spaces/$spaceId/environments/$environment/entries', 
-        {...queryParams, 'access_token': accessToken});
       print('Fetching from URL: $uri');
       
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      );
+      final response = await http.get(uri, headers: {'Content-Type': 'application/json'});
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print('Direct featured query returned ${data.containsKey('items') ? data['items'].length : 0} items');
         
-        final List<Discount> discounts = [];
-        if (data.containsKey('items') && data['items'].isNotEmpty) {
-          // Process the items
-          for (var item in data['items']) {
-            try {
-              final discount = Discount.fromContentful(item);
-              if (!discount.isExpired && discount.active) {
-                discounts.add(discount);
+        if (data is Map && data.containsKey('items') && data['items'] is List) {
+          final items = data['items'] as List;
+          
+          if (items.isNotEmpty) {
+            final includes = data.containsKey('includes') ? data['includes'] : null;
+            
+            final discounts = items.map((item) {
+              try {
+                return Discount.fromContentful(item, includes);
+              } catch (e) {
+                print('Error parsing discount: $e');
+                return null;
               }
-            } catch (e) {
-              print('Error parsing featured discount: $e');
+            }).whereType<Discount>().toList();
+            
+            final featuredDiscounts = discounts.where((d) => d.featured && !d.isExpired && d.active).toList();
+            print('Fetched ${featuredDiscounts.length} featured discounts directly');
+            
+            // Log the titles of the featured discounts
+            if (featuredDiscounts.isNotEmpty) {
+              print('Featured discount titles: ${featuredDiscounts.map((d) => d.title).join(', ')}');
             }
+            
+            return featuredDiscounts;
           }
         }
-        
-        if (discounts.isNotEmpty) {
-          print('Found ${discounts.length} featured discounts via direct query');
-          return discounts;
-        }
       }
+      
+      // Fallback if direct query fails
+      print('Falling back to get all discounts and filter for featured=true');
+      
     } catch (e) {
-      print('Error in direct featured query: $e');
+      print('Error fetching featured discounts directly: $e');
+      print('Falling back to get all discounts and filter for featured=true');
     }
     
-    // Fallback to getting all discounts and filtering client-side
-    print('Falling back to get all discounts and filter for featured=true');
-    final discounts = await getDiscounts();
-    final featuredDiscounts = discounts.where((d) => d.featured && !d.isExpired && d.active).toList();
-    print('Found ${featuredDiscounts.length} featured discounts from ${discounts.length} total via fallback');
+    // Fallback: Get all discounts and filter for featured
+    final discounts = await getDiscounts(featured: true);
+    print('Found ${discounts.length} featured discounts from ${await getDiscounts().then((d) => d.length)} total via fallback');
     
-    // Print them for debugging
-    if (featuredDiscounts.isNotEmpty) {
+    // Log the featured discounts
+    if (discounts.isNotEmpty) {
       print('Featured discounts:');
-      for (var d in featuredDiscounts) {
-        print('- ${d.title} (featured: ${d.featured}, expired: ${d.isExpired}, active: ${d.active})');
+      for (final discount in discounts) {
+        print('- ${discount.title} (featured: ${discount.featured}, expired: ${discount.isExpired}, active: ${discount.active})');
       }
     }
     
-    return featuredDiscounts;
+    return discounts;
   }
   
   // Get discounts from stores near a location
@@ -585,5 +601,19 @@ class ContentfulService {
       print('Error getting discount by ID: $e');
       return null;
     }
+  }
+
+  // Add this new static getter near the top of the class
+  static ContentfulService get instance {
+    if (_instance == null) {
+      // Create the instance with hardcoded values when accessed in an isolate
+      _instance = ContentfulService._internal(
+        spaceId: hardcodedSpaceId,
+        accessToken: hardcodedAccessToken,
+        environment: 'master',
+      );
+      print('Created ContentfulService instance with hardcoded values for background operation');
+    }
+    return _instance!;
   }
 } 

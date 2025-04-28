@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart' as dotenv;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'firebase_options.dart';
+import 'services/contentful_service.dart';
 import 'screens/main_screen.dart';
 import 'screens/login_screen.dart';
 import 'models/discount_provider.dart';
@@ -13,67 +14,47 @@ import 'utils/app_colors.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'providers/category_provider.dart';
 import 'providers/stores_provider.dart';
+import 'package:lottie/lottie.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Load environment variables
+  try {
+    await dotenv.load(fileName: ".env");
+    print("Environment variables loaded successfully");
+  } catch (e) {
+    print("Error loading environment variables: $e");
+  }
+  
   // Hard-coded Contentful credentials for testing
-  // You should replace these with your actual Contentful credentials
-  // and then load from .env for production
   const String hardcodedSpaceId = 'dm9oug4ckfgv';  // Space ID from logs
   const String hardcodedAccessToken = 'Unp4wnUCiGanzC64e_9TyzucoF53yyFvmQ42sOt68O0';  // Updated access token
   
-  // Load environment variables from .env file
-  try {
-    await dotenv.dotenv.load(fileName: ".env");
-    print('Environment variables loaded successfully');
-    
-    // Check if Contentful credentials are available from .env
-    var spaceId = dotenv.dotenv.env['CONTENTFUL_SPACE_ID'];
-    var accessToken = dotenv.dotenv.env['CONTENTFUL_ACCESS_TOKEN'];
-    
-    // If not available from .env, use the hardcoded ones (if provided)
-    if (spaceId == null || spaceId.isEmpty) {
-      spaceId = hardcodedSpaceId;
-      // Add to environment variables so ContentfulService can find them
-      if (spaceId.isNotEmpty) {
-        dotenv.dotenv.env['CONTENTFUL_SPACE_ID'] = spaceId;
-      }
-    }
-    
-    if (accessToken == null || accessToken.isEmpty) {
-      accessToken = hardcodedAccessToken;
-      // Add to environment variables so ContentfulService can find them
-      if (accessToken.isNotEmpty) {
-        dotenv.dotenv.env['CONTENTFUL_ACCESS_TOKEN'] = accessToken;
-      }
-    }
-    
-    print('Contentful credentials check:');
-    print('- Space ID: ${spaceId.isNotEmpty ? "Available" : "MISSING"}');
-    print('- Access Token: ${accessToken.isNotEmpty ? "Available" : "MISSING"}');
-    
-    if (spaceId.isEmpty || accessToken.isEmpty) {
-      print('WARNING: Contentful credentials are missing or invalid. The app will not display content.');
-    }
-  } catch (e) {
-    print('Failed to load environment variables: $e');
-    
-    // If .env loading failed, try to use hardcoded values as fallback
-    if (hardcodedSpaceId.isNotEmpty && hardcodedAccessToken.isNotEmpty) {
-      print('Using hardcoded Contentful credentials as fallback');
-      dotenv.dotenv.env['CONTENTFUL_SPACE_ID'] = hardcodedSpaceId;
-      dotenv.dotenv.env['CONTENTFUL_ACCESS_TOKEN'] = hardcodedAccessToken;
-    }
+  // Check if Contentful credentials are available from .env
+  final spaceId = dotenv.env['CONTENTFUL_SPACE_ID'] ?? '';
+  final accessToken = dotenv.env['CONTENTFUL_ACCESS_TOKEN'] ?? '';
+  
+  // If .env loading failed, use hardcoded values as fallback
+  if (spaceId.isEmpty || accessToken.isEmpty) {
+    print('WARNING: Contentful credentials are missing or invalid. Using hardcoded values.');
+    dotenv.env['CONTENTFUL_SPACE_ID'] = hardcodedSpaceId;
+    dotenv.env['CONTENTFUL_ACCESS_TOKEN'] = hardcodedAccessToken;
   }
   
+  // Initialize ContentfulService early to ensure it's properly set up
+  // for use in all parts of the app, including background compute functions
+  final contentfulService = ContentfulService.instance;
+  print('Pre-initialized ContentfulService singleton with Space ID: ${contentfulService.spaceId}');
+  
+  // Initialize Firebase if using Firebase services
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    print('Firebase initialized successfully');
   } catch (e) {
     print('Failed to initialize Firebase: $e');
-    // Continue without Firebase, the app can still show UI
   }
   
   runApp(const MyApp());
@@ -91,17 +72,19 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CategoryProvider()),
         ChangeNotifierProvider(create: (_) => StoresProvider()),
       ],
-      child: MaterialApp(
-        title: 'Chhar',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.darkTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.dark,
-        home: const AuthWrapper(),
-        routes: {
-          '/login': (context) => const LoginScreen(),
-          '/main': (context) => const MainScreen(),
-        },
+      child: SplashScreen(
+        child: MaterialApp(
+          title: 'Chhar',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.darkTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: ThemeMode.dark,
+          home: const AuthWrapper(),
+          routes: {
+            '/login': (context) => const LoginScreen(),
+            '/main': (context) => const MainScreen(),
+          },
+        ),
       ),
     );
   }
@@ -213,5 +196,124 @@ class AppTheme {
         ),
       ),
     );
+  }
+}
+
+// Add SplashScreen class definition at the end of the file (before the last closing brace)
+class SplashScreen extends StatefulWidget {
+  final Widget child;
+  const SplashScreen({Key? key, required this.child}) : super(key: key);
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  bool _isLoading = true;
+  late AnimationController _controller;
+  late Animation<double> _fadeInAnimation;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Initialize animation controller
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    
+    // Create animations
+    _fadeInAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+      ),
+    );
+    
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+      ),
+    );
+    
+    // Start the animation
+    _controller.forward();
+    
+    // Simulate loading time
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _isLoading 
+        ? Directionality(
+            textDirection: TextDirection.ltr,
+            child: Scaffold(
+              backgroundColor: AppColors.backgroundColor,
+              body: Center(
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, child) {
+                    return Opacity(
+                      opacity: _fadeInAnimation.value,
+                      child: Transform.scale(
+                        scale: _scaleAnimation.value,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Lottie animation from splash_animation.json
+                            SizedBox(
+                              width: 250,
+                              height: 250,
+                              child: Lottie.asset(
+                                'assets/animations/splash_animation.json',
+                                fit: BoxFit.contain,
+                                repeat: true,
+                              ),
+                            ),
+                            const SizedBox(height: 30),
+                            
+                            // App title with styled text
+                            Text(
+                              'Chhar',
+                              style: GoogleFonts.outfit(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Find discounts near you',
+                              style: GoogleFonts.outfit(
+                                fontSize: 16,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          )
+        : widget.child;
   }
 } 

@@ -46,7 +46,7 @@ class Store {
     this.address,
   }) : _logoUrl = logoUrl;
 
-  factory Store.fromContentful(Map<String, dynamic> entry) {
+  factory Store.fromContentful(Map<String, dynamic> entry, [Map<String, dynamic>? rootIncludes]) {
     final fields = entry['fields'] as Map<String, dynamic>;
     
     // Extract category IDs
@@ -96,53 +96,62 @@ class Store {
             final assetId = sys['id'];
             print('Logo asset ID: $assetId');
             
-            // Look for includes in the main entry
-            if (entry.containsKey('includes')) {
-              final includes = entry['includes'];
-              print('Found includes in entry: ${includes.keys.join(", ")}');
+            // Look for includes at different possible locations
+            Map<String, dynamic>? includes;
+            
+            // Check if includes is directly in the entry
+            if (entry.containsKey('includes') && entry['includes'] is Map) {
+              includes = entry['includes'] as Map<String, dynamic>;
+              print('Found includes in entry');
+            } 
+            // Check if includes was passed as a separate parameter
+            else if (rootIncludes != null) {
+              includes = rootIncludes;
+              print('Using root includes passed as parameter');
+            }
+            
+            if (includes != null) {
+              print('Includes keys: ${includes.keys.join(", ")}');
               
-              if (includes is Map && includes.containsKey('Asset') && includes['Asset'] is List) {
+              if (includes.containsKey('Asset') && includes['Asset'] is List) {
                 final assets = includes['Asset'] as List;
                 print('Found ${assets.length} assets in includes');
                 
                 try {
                   // Try to find the asset with matching ID
-                  final asset = assets.firstWhere(
-                    (asset) => asset['sys'] != null && 
-                              asset['sys'] is Map && 
-                              asset['sys']['id'] == assetId,
-                    orElse: () => <String, dynamic>{},
-                  );
-                  
-                  if (asset.isNotEmpty) {
-                    print('Found matching asset: ${asset['sys']['id']}');
-                    
-                    if (asset.containsKey('fields') &&
-                        asset['fields'] is Map &&
-                        asset['fields'].containsKey('file') &&
-                        asset['fields']['file'] is Map &&
-                        asset['fields']['file'].containsKey('url')) {
-                      logoUrl = asset['fields']['file']['url'];
-                      print('Found logo URL in includes: $logoUrl');
-                    } else {
-                      print('Asset structure not as expected: ${asset['fields']}');
+                  for (var asset in assets) {
+                    if (asset is Map && 
+                        asset.containsKey('sys') && 
+                        asset['sys'] is Map && 
+                        asset['sys']['id'] == assetId) {
+                      
+                      print('Found matching asset: ${asset['sys']['id']}');
+                      
+                      if (asset.containsKey('fields') &&
+                          asset['fields'] is Map &&
+                          asset['fields'].containsKey('file') &&
+                          asset['fields']['file'] is Map &&
+                          asset['fields']['file'].containsKey('url')) {
+                        logoUrl = asset['fields']['file']['url'];
+                        print('Found logo URL in includes: $logoUrl');
+                        break; // Exit the loop once we find the matching asset
+                      } else {
+                        print('Asset structure not as expected: ${asset['fields']}');
+                      }
                     }
-                  } else {
-                    print('Could not find asset with ID $assetId in includes');
+                  }
+                  
+                  if (logoUrl == null) {
+                    print('Could not find asset with ID $assetId in includes after scanning all assets');
                   }
                 } catch (e) {
                   print('Error finding asset with ID $assetId: $e');
                 }
               } else {
                 print('No Asset list found in includes or wrong structure');
-                if (includes is Map) {
-                  print('Includes keys: ${includes.keys.join(", ")}');
-                } else {
-                  print('Includes is not a map');
-                }
               }
             } else {
-              print('No includes in entry');
+              print('No includes found in any location');
             }
           } else {
             print('No ID in sys object');

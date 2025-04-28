@@ -152,7 +152,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Function to run in isolate
   static Future<DataResult> _fetchDataInBackground(Map<String, dynamic> _) async {
     try {
-      final contentfulService = ContentfulService();
+      // Use the static instance getter instead of constructing a new instance
+      final contentfulService = ContentfulService.instance;
       
       List<Category> categories = [];
       List<Store> stores = [];
