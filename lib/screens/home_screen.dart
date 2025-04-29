@@ -325,8 +325,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppColors.accentTeal.withOpacity(0.9),
-              AppColors.accentMagenta.withOpacity(0.9),
+              const Color(0xFF1B5E20), // Dark Green
+              const Color(0xFF2E7D32), // Slightly lighter Dark Green
             ],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
@@ -337,13 +337,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child: const Row(
           children: [
             Icon(
-              Icons.local_offer,
+              Icons.attach_money,
               color: Colors.white,
               size: 24,
             ),
             SizedBox(width: 10),
             Text(
-              'Discount Hub',
+              'Chhar',
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -359,14 +359,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       actions: [
         IconButton(
           icon: const Icon(Icons.notifications_outlined),
-          color: AppColors.accentTeal,
+          color: Color(0xFF1B5E20), // Dark Green to match gradient
           onPressed: () {
             // Navigate to notifications
           },
         ),
         IconButton(
           icon: const Icon(Icons.logout),
-          color: AppColors.accentMagenta,
+          color: Color(0xFF2E7D32), // Slightly lighter Dark Green to match gradient
           onPressed: () async {
             // Sign out using the context provider
             final authService = Provider.of<AuthService>(context, listen: false);

@@ -73,6 +73,16 @@ class _CategorySearchScreenState extends State<CategorySearchScreen> {
     );
   }
 
+  void _clearSearch() {
+    setState(() {
+      _searchController.clear();
+      _searchResults = [];
+      _hasSearched = false;
+      _error = null;
+      _isLoading = false;
+    });
+  }
+
   Widget _buildSearchBar() {
     return Container(
       margin: const EdgeInsets.all(16),
@@ -359,40 +369,78 @@ class _CategorySearchScreenState extends State<CategorySearchScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            AppBar(
-              title: const Text('Search with AI'),
-              elevation: 0,
-              backgroundColor: Colors.transparent,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.info_outline),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('AI Search Tips'),
-                        content: const Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('• Ask natural questions about discounts'),
-                            Text('• Specify categories or preferences'),
-                            Text('• Mention price ranges or percentages'),
-                            Text('• Ask about specific stores or brands'),
-                            Text('• Filter by expiration dates'),
-                          ],
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Got it'),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: AppBar(
+                title: const Text('Search with AI'),
+                elevation: 0,
+                backgroundColor: Colors.transparent,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.pop(context),
                 ),
-              ],
+                actions: [
+                  Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentTeal.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.refresh_rounded),
+                      color: AppColors.accentTeal,
+                      tooltip: 'Refresh page',
+                      onPressed: _clearSearch,
+                    ),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.only(right: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentMagenta.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.info_outline),
+                      color: AppColors.accentMagenta,
+                      tooltip: 'Search tips',
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('AI Search Tips'),
+                            content: const Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('• Ask natural questions about discounts'),
+                                Text('• Specify categories or preferences'),
+                                Text('• Mention price ranges or percentages'),
+                                Text('• Ask about specific stores or brands'),
+                                Text('• Filter by expiration dates'),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Got it'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
             _buildSearchBar(),
             Expanded(
