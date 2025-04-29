@@ -17,7 +17,6 @@ import 'discount_detail_screen.dart';
 import 'store_detail_screen.dart';
 import 'category_detail_screen.dart';
 import 'package:flutter/foundation.dart' hide Category;
-import 'dart:math' as Math;
 
 // Data result class for isolate computation
 class DataResult {
@@ -726,7 +725,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ? CachedNetworkImage(
                       imageUrl: store.logoUrl!,
                       fit: BoxFit.cover,
-                      placeholder: (context, url) => Center(
+                      placeholder: (context, url) => const Center(
                         child: SizedBox(
                           width: 20,
                           height: 20,
@@ -1093,7 +1092,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               ? 'https:${discount.imageUrl!}'
                               : 'https://${discount.imageUrl!}',
                       fit: BoxFit.cover,
-                      placeholder: (context, url) => Center(
+                      placeholder: (context, url) => const Center(
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
@@ -1140,10 +1139,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   void _testImageLoading() async {
     try {
       // Test direct image loading
-      final testUrl = 'https://via.placeholder.com/150';
-      final snackBar = SnackBar(
+      const testUrl = 'https://via.placeholder.com/150';
+      const snackBar = SnackBar(
         content: Text('Testing image loading from: $testUrl'),
-        duration: const Duration(seconds: 5),
+        duration: Duration(seconds: 5),
       );
       ScaffoldMessenger.of(context).showSnackBar(snackBar);
       

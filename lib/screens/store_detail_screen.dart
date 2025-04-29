@@ -51,7 +51,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
       if (_retryCount < _maxRetries) {
         _retryCount++;
         print('Retrying fetch discounts (attempt $_retryCount of $_maxRetries)...');
-        await Future.delayed(Duration(seconds: 1));
+        await Future.delayed(const Duration(seconds: 1));
         return _fetchStoreDiscounts();
       }
       

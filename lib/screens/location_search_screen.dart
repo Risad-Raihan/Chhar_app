@@ -8,7 +8,6 @@ import 'package:geocoding/geocoding.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:lottie/lottie.dart' hide Marker;
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../models/store.dart';
 import '../providers/category_provider.dart';
 import '../services/contentful_service.dart';

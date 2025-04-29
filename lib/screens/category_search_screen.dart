@@ -19,12 +19,12 @@ class _CategorySearchScreenState extends State<CategorySearchScreen> {
   final AISearchService _aiSearchService = AISearchService();
   final List<String> _recentSearches = [];
   final List<String> _suggestedQueries = [
-    'Food discounts',
-    'Electronics deals',
-    'Travel offers',
-    'Fashion sales',
-    'Restaurant deals',
+    'Travel discounts',
+    'Transport offers',
+    'Laptop deals',
+    'Tech offers',
     'Hotel discounts',
+    'Flight deals',
   ];
   
   List<Discount> _searchResults = [];
@@ -32,6 +32,7 @@ class _CategorySearchScreenState extends State<CategorySearchScreen> {
   String? _error;
   int _retryCount = 0;
   bool _isGridView = false;
+  bool _hasSearched = false;
 
   @override
   void initState() {
@@ -72,55 +73,38 @@ class _CategorySearchScreenState extends State<CategorySearchScreen> {
     );
   }
 
-  Widget _buildSuggestionChip(String suggestion, {bool isRecent = false}) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ActionChip(
-        avatar: Icon(
-          isRecent ? Icons.history : Icons.search,
-          size: 16,
-          color: Colors.grey,
-        ),
-        label: Text(suggestion),
-        onPressed: () => _performSearch(suggestion),
-        backgroundColor: Theme.of(context).cardColor,
-        side: BorderSide(
-          color: Colors.grey.withOpacity(0.2),
-        ),
-      ).animate()
-        .fadeIn(delay: Duration(milliseconds: isRecent ? 100 : 200))
-        .slideX(begin: 0.2, end: 0),
-    );
-  }
-
-  Widget _buildSearchHeader() {
+  Widget _buildSearchBar() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
+            blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: TextField(
+        controller: _searchController,
+        onSubmitted: _performSearch,
+        decoration: InputDecoration(
+          hintText: 'Ask me about discounts...',
+          prefixIcon: const Icon(Icons.search, color: AppColors.accentTeal),
+          suffixIcon: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: Text(
-                  'Ask me anything about discounts',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+              IconButton(
+                icon: const Icon(Icons.mic, color: AppColors.accentMagenta),
+                onPressed: () {
+                  // TODO: Implement voice search
+                },
               ),
               IconButton(
                 icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view),
+                color: AppColors.accentTeal,
                 onPressed: () {
                   setState(() {
                     _isGridView = !_isGridView;
@@ -129,70 +113,70 @@ class _CategorySearchScreenState extends State<CategorySearchScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Type your search query...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.mic),
-                    onPressed: () {
-                      // TODO: Implement voice search
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.send),
-                    onPressed: () => _performSearch(_searchController.text),
-                  ),
-                ],
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: Theme.of(context).scaffoldBackgroundColor,
-            ),
-            onSubmitted: _performSearch,
-          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+        style: const TextStyle(fontSize: 16),
+      ),
+    );
+  }
+
+  Widget _buildSuggestionsSection() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           if (_recentSearches.isNotEmpty) ...[
-            const SizedBox(height: 16),
             Text(
               'Recent Searches',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: Colors.grey[600],
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _recentSearches
-                    .map((query) => _buildSuggestionChip(query, isRecent: true))
-                    .toList(),
-              ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _recentSearches
+                  .map((query) => _buildSuggestionChip(query, isRecent: true))
+                  .toList(),
             ),
+            const SizedBox(height: 24),
           ],
-          const SizedBox(height: 16),
           Text(
-            'Suggested Searches',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.grey,
+            'Popular Categories',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: Colors.grey[600],
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: _suggestedQueries
-                  .map((query) => _buildSuggestionChip(query))
-                  .toList(),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _suggestedQueries
+                .map((query) => _buildSuggestionChip(query))
+                .toList(),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Search Tips',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: Colors.grey[600],
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '• Try searching for specific stores like "Lenovo" or "ShareTrip"\n'
+            '• Search for discount types like "rewards" or "offers"\n'
+            '• Look for travel services like "flights" or "hotels"\n'
+            '• Search for tech products like "laptop" or "electronics"',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
             ),
           ),
         ],
@@ -200,58 +184,141 @@ class _CategorySearchScreenState extends State<CategorySearchScreen> {
     );
   }
 
-  Widget _buildResultsGrid() {
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
+  Widget _buildSuggestionChip(String suggestion, {bool isRecent = false}) {
+    return ActionChip(
+      avatar: Icon(
+        isRecent ? Icons.history : Icons.search,
+        size: 16,
+        color: AppColors.accentTeal,
       ),
-      itemCount: _searchResults.length,
-      itemBuilder: (context, index) {
-        return DiscountCard(
-          discount: _searchResults[index],
-          onTap: () => _navigateToDiscountDetail(_searchResults[index]),
-          isGridView: true,
-        ).animate()
-          .fadeIn(delay: Duration(milliseconds: 100 * index))
-          .slideY(begin: 0.2, end: 0);
-      },
+      label: Text(suggestion),
+      labelStyle: TextStyle(
+        color: isRecent ? Colors.grey[600] : AppColors.accentTeal,
+      ),
+      backgroundColor: isRecent 
+          ? Colors.grey.withOpacity(0.1)
+          : AppColors.accentTeal.withOpacity(0.1),
+      onPressed: () => _performSearch(suggestion),
+    ).animate()
+      .fadeIn(delay: Duration(milliseconds: isRecent ? 100 : 200))
+      .slideX(begin: 0.2, end: 0);
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const AnimatedLoading(
+            animationType: 'loading',
+            size: 150,
+            message: 'AI is analyzing discounts...',
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Finding the best matches for you...',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildResultsList() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _searchResults.length,
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: DiscountCard(
-            discount: _searchResults[index],
-            onTap: () => _navigateToDiscountDetail(_searchResults[index]),
-          ).animate()
-            .fadeIn(delay: Duration(milliseconds: 100 * index))
-            .slideX(begin: 0.2, end: 0),
-        );
-      },
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: Colors.red[300],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _error ?? 'Something went wrong',
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.red,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () {
+              if (_searchController.text.isNotEmpty) {
+                _performSearch(_searchController.text);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentTeal,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Try Again'),
+          ),
+        ],
+      ),
     );
+  }
+
+  Widget _buildEmptyState() {
+    if (!_hasSearched) {
+      return const Center(
+        child: AnimatedLoading(
+          animationType: 'ai',
+          size: 200,
+          message: 'Ask me about any discounts!\nI can help you find the best deals based on your preferences',
+        ),
+      );
+    }
+    
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No matching discounts found',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Try different keywords or check out our suggestions',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+          ),
+        ],
+      ),
+    ).animate()
+      .fadeIn()
+      .scale();
   }
 
   Future<void> _performSearch(String query) async {
-    if (query.trim().isEmpty) {
-      setState(() {
-        _searchResults = [];
-        _error = null;
-      });
-      return;
-    }
+    if (query.trim().isEmpty) return;
 
     setState(() {
       _isLoading = true;
       _error = null;
+      _hasSearched = true;
     });
 
     try {
@@ -286,95 +353,114 @@ class _CategorySearchScreenState extends State<CategorySearchScreen> {
     }
   }
 
-  Widget _buildErrorWidget() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              _error!.contains('busy') ? Icons.timer : Icons.error_outline,
-              size: 64,
-              color: _error!.contains('busy') ? Colors.orange : Colors.red,
-            ).animate()
-              .scale(duration: const Duration(milliseconds: 300)),
-            const SizedBox(height: 16),
-            Text(
-              _error!,
-              style: TextStyle(
-                color: _error!.contains('busy') ? Colors.orange : Colors.red,
-                fontSize: 16,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (_error!.contains('busy')) ...[
-              const SizedBox(height: 16),
-              const CircularProgressIndicator(),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Search with AI'),
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          _buildSearchHeader(),
-          Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: AnimatedLoading(
-                      animationType: 'loading',
-                      size: 150,
-                      message: 'AI is analyzing discounts...',
-                    ),
-                  )
-                : _error != null
-                    ? _buildErrorWidget()
-                    : _searchResults.isEmpty && _searchController.text.isNotEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.search_off,
-                                  size: 64,
-                                  color: Colors.grey[400],
-                                ),
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'No matching discounts found',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey,
+      body: SafeArea(
+        child: Column(
+          children: [
+            AppBar(
+              title: const Text('Search with AI'),
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.info_outline),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('AI Search Tips'),
+                        content: const Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('• Ask natural questions about discounts'),
+                            Text('• Specify categories or preferences'),
+                            Text('• Mention price ranges or percentages'),
+                            Text('• Ask about specific stores or brands'),
+                            Text('• Filter by expiration dates'),
+                          ],
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Got it'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+            _buildSearchBar(),
+            Expanded(
+              child: _isLoading
+                  ? _buildLoadingState()
+                  : _error != null
+                      ? _buildErrorState()
+                      : _searchResults.isEmpty
+                          ? SingleChildScrollView(
+                              child: Column(
+                                children: [
+                                  _buildSuggestionsSection(),
+                                  if (_hasSearched) _buildEmptyState(),
+                                ],
+                              ),
+                            )
+                          : _isGridView
+                              ? GridView.builder(
+                                  padding: const EdgeInsets.all(16),
+                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    childAspectRatio: 0.75,
+                                    crossAxisSpacing: 16,
+                                    mainAxisSpacing: 16,
                                   ),
+                                  itemCount: _searchResults.length,
+                                  itemBuilder: (context, index) {
+                                    return DiscountCard(
+                                      discount: _searchResults[index],
+                                      onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => DiscountDetailScreen(
+                                            discount: _searchResults[index],
+                                          ),
+                                        ),
+                                      ),
+                                      isGridView: true,
+                                    ).animate()
+                                      .fadeIn(delay: Duration(milliseconds: 100 * index))
+                                      .slideY(begin: 0.2, end: 0);
+                                  },
+                                )
+                              : ListView.builder(
+                                  padding: const EdgeInsets.all(16),
+                                  itemCount: _searchResults.length,
+                                  itemBuilder: (context, index) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 16),
+                                      child: DiscountCard(
+                                        discount: _searchResults[index],
+                                        onTap: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => DiscountDetailScreen(
+                                              discount: _searchResults[index],
+                                            ),
+                                          ),
+                                        ),
+                                      ).animate()
+                                        .fadeIn(delay: Duration(milliseconds: 100 * index))
+                                        .slideX(begin: 0.2, end: 0),
+                                    );
+                                  },
                                 ),
-                              ],
-                            ),
-                          ).animate()
-                            .fadeIn()
-                            .scale()
-                        : _searchResults.isEmpty
-                            ? const Center(
-                                child: AnimatedLoading(
-                                  animationType: 'ai',
-                                  size: 200,
-                                  message: 'Ask me about any discounts!\nI can help you find the best deals based on your preferences',
-                                ),
-                              )
-                            : _isGridView
-                                ? _buildResultsGrid()
-                                : _buildResultsList(),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
