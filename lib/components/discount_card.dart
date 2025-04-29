@@ -10,6 +10,7 @@ class DiscountCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onFavorite;
   final bool showAnimation;
+  final bool isGridView;
 
   const DiscountCard({
     Key? key,
@@ -17,22 +18,231 @@ class DiscountCard extends StatelessWidget {
     required this.onTap,
     this.onFavorite,
     this.showAnimation = true,
+    this.isGridView = false,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final isExpired = discount.isExpired;
-    final daysRemaining = discount.daysRemaining();
-    final cardWidget = _buildCardContent(context, isExpired, daysRemaining);
-    
-    // Apply animations conditionally with more stable curves
-    return showAnimation 
-        ? cardWidget
-            .animate()
-            .fadeIn(duration: 400.ms, curve: Curves.easeOut)
-            .slideY(begin: 0.1, end: 0, duration: 500.ms, curve: Curves.easeOut)
-            .scaleXY(begin: 0.97, end: 1.0, duration: 400.ms, curve: Curves.easeOut) 
-        : cardWidget;
+    if (isGridView) {
+      return _buildGridCard(context);
+    }
+    return _buildListCard(context);
+  }
+
+  Widget _buildGridCard(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Discount Image
+            AspectRatio(
+              aspectRatio: 1,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (discount.imageUrl != null)
+                    CachedNetworkImage(
+                      imageUrl: discount.imageUrl!,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey[800],
+                        child: const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: Colors.grey[800],
+                        child: const Icon(Icons.error),
+                      ),
+                    )
+                  else
+                    Container(
+                      color: Colors.grey[800],
+                      child: const Icon(Icons.local_offer, size: 48),
+                    ),
+                  if (discount.discountPercentage != null)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.accentTeal.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          '${discount.discountPercentage}% OFF',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    discount.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  if (discount.description != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      discount.description!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[400],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildListCard(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        child: Row(
+          children: [
+            // Discount Image
+            SizedBox(
+              width: 120,
+              height: 120,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (discount.imageUrl != null)
+                    CachedNetworkImage(
+                      imageUrl: discount.imageUrl!,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey[800],
+                        child: const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: Colors.grey[800],
+                        child: const Icon(Icons.error),
+                      ),
+                    )
+                  else
+                    Container(
+                      color: Colors.grey[800],
+                      child: const Icon(Icons.local_offer, size: 48),
+                    ),
+                  if (discount.discountPercentage != null)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.accentTeal.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          '${discount.discountPercentage}% OFF',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      discount.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    if (discount.description != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        discount.description!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[400],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 16,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Valid until ${DateFormat('MMM dd, yyyy').format(discount.expiryDate)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[400],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildCardContent(BuildContext context, bool isExpired, int daysRemaining) {

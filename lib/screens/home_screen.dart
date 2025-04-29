@@ -464,8 +464,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         // Search by Category Card - Full width
         _buildSearchCard(
           animationType: 'search',
-          title: 'Search by Category',
-          subtitle: 'Browse deals by type',
+          title: 'Search with AI',
+          subtitle: 'Find deals using AI assistant',
           onTap: _navigateToCategorySearch,
           color: AppColors.accentOrange,
           delay: 200,
