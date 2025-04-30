@@ -14,7 +14,7 @@ import 'utils/app_colors.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'providers/category_provider.dart';
 import 'providers/stores_provider.dart';
-import 'package:lottie/lottie.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -213,42 +213,73 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   late AnimationController _controller;
   late Animation<double> _fadeInAnimation;
   late Animation<double> _scaleAnimation;
+  late Animation<double> _pulseAnimation;
+  late Animation<double> _textFadeAnimation;
 
   @override
   void initState() {
     super.initState();
     
-    // Initialize animation controller
+    // Initialize animation controller with longer duration
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 2000),
     );
     
     // Create animations
     _fadeInAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
       ),
     );
     
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+        curve: const Interval(0.0, 0.5, curve: Curves.elasticOut),
+      ),
+    );
+
+    // Pulse animation that starts after the initial scale
+    _pulseAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 1.05)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.05, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 50,
+      ),
+    ]).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.5, 1.0, curve: Curves.linear),
+      ),
+    );
+
+    // Text fade in animation with delay
+    _textFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.3, 0.7, curve: Curves.easeOut),
       ),
     );
     
-    // Start the animation
-    _controller.forward();
-    
-    // Simulate loading time
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    // Start the animation and loading sequence
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _controller.forward();
+      
+      // Increased minimum display time to 2.5 seconds
+      Future.delayed(const Duration(milliseconds: 2500), () {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      });
     });
   }
 
@@ -269,45 +300,73 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 child: AnimatedBuilder(
                   animation: _controller,
                   builder: (context, child) {
-                    return Opacity(
-                      opacity: _fadeInAnimation.value,
-                      child: Transform.scale(
-                        scale: _scaleAnimation.value,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Lottie animation from splash_animation.json
-                            SizedBox(
-                              width: 250,
-                              height: 250,
-                              child: Lottie.asset(
-                                'assets/animations/splash_animation.json',
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Animated logo container
+                        Opacity(
+                          opacity: _fadeInAnimation.value,
+                          child: Transform.scale(
+                            scale: _scaleAnimation.value * _pulseAnimation.value,
+                            child: Container(
+                              width: 300,  // Increased size
+                              height: 180,  // Adjusted for aspect ratio
+                              decoration: BoxDecoration(
+                                color: Colors.transparent,
+                              ),
+                              child: SvgPicture.asset(
+                                'assets/images/logo.svg',
                                 fit: BoxFit.contain,
-                                repeat: true,
+                                // Add color override to ensure visibility
+                                colorFilter: const ColorFilter.mode(
+                                  Color(0xFF69BF69), // Your brand color
+                                  BlendMode.srcIn,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 30),
-                            
-                            // App title with styled text
-                            Text(
-                              'Chhar',
-                              style: GoogleFonts.outfit(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Find discounts near you',
-                              style: GoogleFonts.outfit(
-                                fontSize: 16,
-                                color: Colors.white70,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 40),
+                        
+                        // Animated text container
+                        Opacity(
+                          opacity: _textFadeAnimation.value,
+                          child: Column(
+                            children: [
+                              // App title with styled text
+                              Text(
+                                'Chhar',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: 1.2,
+                                ),
+                              ).animate()
+                                .slideY(
+                                  begin: 0.3,
+                                  duration: const Duration(milliseconds: 500),
+                                  curve: Curves.easeOut,
+                                ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Find discounts near you',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 18,
+                                  color: Colors.white70,
+                                  letterSpacing: 0.5,
+                                ),
+                              ).animate()
+                                .slideY(
+                                  begin: 0.3,
+                                  duration: const Duration(milliseconds: 500),
+                                  delay: const Duration(milliseconds: 100),
+                                  curve: Curves.easeOut,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
                     );
                   },
                 ),
