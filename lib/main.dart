@@ -114,37 +114,42 @@ class AuthWrapper extends StatelessWidget {
                 children: [
                   // App logo
                   Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          AppColors.accentTeal,
-                          AppColors.accentMagenta,
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                    width: 300,
+                    height: 180,
+                    decoration: const BoxDecoration(
+                      color: Colors.transparent,
+                    ),
+                    child: Center(
+                      child: SvgPicture.asset(
+                        'assets/images/chhar_clean.svg',
+                        width: 200,
+                        height: 120,
+                        fit: BoxFit.contain,
+                        colorFilter: const ColorFilter.mode(
+                          Color(0xFF69BF69), // Your brand color
+                          BlendMode.srcIn,
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Icon(
-                      Icons.local_offer,
-                      size: 64,
-                      color: Colors.white,
-                    ),
-                  ).animate().scale(
-                    duration: const Duration(milliseconds: 600),
-                    curve: Curves.easeOut,
                   ),
                   
                   const SizedBox(height: 24),
                   
-                  // Loading animation
-                  const AnimatedLoading(
-                    animationType: 'loading',
-                    size: 60,
-                    color: AppColors.accentTeal,
-                    message: 'Loading Discount Hub...',
+                  // Loading indicator
+                  const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentTeal),
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Loading text
+                  Text(
+                    'Loading Chhar...',
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      color: Colors.white70,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ],
               ),
@@ -213,8 +218,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   late AnimationController _controller;
   late Animation<double> _fadeInAnimation;
   late Animation<double> _scaleAnimation;
-  late Animation<double> _pulseAnimation;
-  late Animation<double> _textFadeAnimation;
 
   @override
   void initState() {
@@ -223,48 +226,21 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     // Initialize animation controller with longer duration
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 3000), // Increased duration
     );
     
     // Create animations
     _fadeInAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+        curve: const Interval(0.2, 0.7, curve: Curves.easeOut),
       ),
     );
     
-    _scaleAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.0, 0.5, curve: Curves.elasticOut),
-      ),
-    );
-
-    // Pulse animation that starts after the initial scale
-    _pulseAnimation = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 1.05)
-            .chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 50,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.05, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 50,
-      ),
-    ]).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.5, 1.0, curve: Curves.linear),
-      ),
-    );
-
-    // Text fade in animation with delay
-    _textFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.3, 0.7, curve: Curves.easeOut),
+        curve: const Interval(0.2, 0.7, curve: Curves.easeOut),
       ),
     );
     
@@ -272,8 +248,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _controller.forward();
       
-      // Increased minimum display time to 2.5 seconds
-      Future.delayed(const Duration(milliseconds: 2500), () {
+      // Increased minimum display time to 4 seconds
+      Future.delayed(const Duration(milliseconds: 4000), () {
         if (mounted) {
           setState(() {
             _isLoading = false;
@@ -307,63 +283,31 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         Opacity(
                           opacity: _fadeInAnimation.value,
                           child: Transform.scale(
-                            scale: _scaleAnimation.value * _pulseAnimation.value,
+                            scale: _scaleAnimation.value,
                             child: Container(
-                              width: 300,  // Increased size
-                              height: 180,  // Adjusted for aspect ratio
-                              decoration: BoxDecoration(
+                              width: 300,
+                              height: 180,
+                              decoration: const BoxDecoration(
                                 color: Colors.transparent,
                               ),
-                              child: SvgPicture.asset(
-                                'assets/images/logo.svg',
-                                fit: BoxFit.contain,
-                                // Add color override to ensure visibility
-                                colorFilter: const ColorFilter.mode(
-                                  Color(0xFF69BF69), // Your brand color
-                                  BlendMode.srcIn,
+                              child: Center(
+                                child: SvgPicture.asset(
+                                  'assets/images/chhar_clean.svg',
+                                  width: 200,
+                                  height: 120,
+                                  fit: BoxFit.contain,
+                                  colorFilter: const ColorFilter.mode(
+                                    Color(0xFF69BF69),
+                                    BlendMode.srcIn,
+                                  ),
+                                  placeholderBuilder: (BuildContext context) => const Center(
+                                    child: CircularProgressIndicator(
+                                      color: Color(0xFF69BF69),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 40),
-                        
-                        // Animated text container
-                        Opacity(
-                          opacity: _textFadeAnimation.value,
-                          child: Column(
-                            children: [
-                              // App title with styled text
-                              Text(
-                                'Chhar',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: 1.2,
-                                ),
-                              ).animate()
-                                .slideY(
-                                  begin: 0.3,
-                                  duration: const Duration(milliseconds: 500),
-                                  curve: Curves.easeOut,
-                                ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Find discounts near you',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 18,
-                                  color: Colors.white70,
-                                  letterSpacing: 0.5,
-                                ),
-                              ).animate()
-                                .slideY(
-                                  begin: 0.3,
-                                  duration: const Duration(milliseconds: 500),
-                                  delay: const Duration(milliseconds: 100),
-                                  curve: Curves.easeOut,
-                                ),
-                            ],
                           ),
                         ),
                       ],
