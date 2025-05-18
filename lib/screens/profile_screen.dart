@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import '../styles/colors.dart';
+import '../utils/app_colors.dart';
 import '../services/auth_service.dart';
+import '../widgets/animated_theme_toggle.dart';
+import '../providers/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -24,25 +27,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'My Profile',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: AppColors.primaryColor,
+            color: isDark ? Colors.white : AppColors.primaryColor,
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 2,
-        shadowColor: Colors.black.withOpacity(0.1),
         actions: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.settings,
-              color: AppColors.primaryColor,
+              color: isDark ? Colors.white : AppColors.primaryColor,
             ),
             onPressed: () {
               // Navigate to settings
@@ -59,6 +62,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // Stats
             _buildStatsSection(),
             
+            // Theme Toggle
+            _buildThemeToggleSection(),
+            
             // Account Settings
             _buildSettingsSection(),
             
@@ -71,6 +77,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onPressed: () async {
                     await _authService.signOut();
                     // Navigate to login screen
+                    if (!mounted) return;
                     Navigator.of(context).pushReplacementNamed('/login');
                   },
                   style: ElevatedButton.styleFrom(
@@ -97,6 +104,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileHeader() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
     return Container(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -121,9 +131,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // Name
           Text(
             _userData['name'],
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
             ),
           ),
           const SizedBox(height: 4),
@@ -133,7 +144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _userData['email'],
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey[600],
+              color: isDark ? Colors.white70 : Colors.grey[600],
             ),
           ),
           const SizedBox(height: 8),
@@ -143,7 +154,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             'Member since ${_userData['joinedDate']}',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: isDark ? Colors.white60 : Colors.grey[500],
             ),
           ),
           const SizedBox(height: 16),
@@ -177,19 +188,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildStatsSection() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: isDark ? AppColors.lightSurface : Colors.grey[50],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Your Activity',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
             ),
           ),
           const SizedBox(height: 16),
@@ -218,14 +233,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildStatCard(String title, String value, IconData icon) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.backgroundColor : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -241,9 +259,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
             ),
           ),
           const SizedBox(height: 4),
@@ -251,7 +270,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[600],
+              color: isDark ? Colors.white70 : Colors.grey[600],
             ),
             textAlign: TextAlign.center,
           ),
@@ -260,17 +279,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _buildThemeToggleSection() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.backgroundColor : Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'App Theme',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          Row(
+            children: [
+              Text(
+                isDark ? 'Dark' : 'Light',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.white70 : Colors.grey[600],
+                ),
+              ),
+              const SizedBox(width: 12),
+              const AnimatedThemeToggle(),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSettingsSection() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
     return Container(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Account Settings',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
             ),
           ),
           const SizedBox(height: 16),
@@ -322,15 +392,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSettingItem(String title, IconData icon, VoidCallback onTap) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
     return ListTile(
       leading: Icon(
         icon,
         color: AppColors.primaryColor,
       ),
-      title: Text(title),
-      trailing: const Icon(
+      title: Text(
+        title,
+        style: TextStyle(
+          color: isDark ? Colors.white : Colors.black87,
+        ),
+      ),
+      trailing: Icon(
         Icons.chevron_right,
-        color: Colors.grey,
+        color: isDark ? Colors.white60 : Colors.grey,
       ),
       contentPadding: EdgeInsets.zero,
       onTap: onTap,

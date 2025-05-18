@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:async';
 import '../models/category.dart';
 import '../models/store.dart';
 import '../models/discount.dart';
 import '../services/contentful_service.dart';
 import '../utils/app_colors.dart';
+import '../utils/animation_utils.dart';
 import '../services/auth_service.dart';
 import '../components/discount_card.dart';
 import '../components/animated_loading.dart';
@@ -17,6 +20,7 @@ import 'discount_detail_screen.dart';
 import 'store_detail_screen.dart';
 import 'category_detail_screen.dart';
 import 'package:flutter/foundation.dart' hide Category;
+import 'dart:math' as Math;
 
 // Data result class for isolate computation
 class DataResult {
@@ -259,65 +263,165 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    // Get current theme mode
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      body: SafeArea(
-        child: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) {
-            return [
-              _buildAnimatedAppBar(innerBoxIsScrolled),
-            ];
-          },
-          body: _error != null
-              ? _buildErrorView()
-              : RefreshIndicator(
-                  onRefresh: _fetchData,
-                  color: AppColors.accentTeal,
-                  backgroundColor: AppColors.cardColor,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Welcome Header with animation
-                        _buildWelcomeHeader(),
-                        
-                        // Search Cards - Two big tiles for location and category search
-                        _buildSearchCardsSection(),
-                        
-                        const SizedBox(height: 20),
-                        
-                        // Featured Stores Section
-                        _buildFeaturedStoresSection(),
-                        
-                        // Featured Discounts Section (only shows data from Contentful)
-                        _buildFeaturedDiscountsSection(),
-                        
-                        // Categories Section
-                        _buildCategoriesSection(),
-                        
-                        const SizedBox(height: 24),
+      body: Stack(
+        children: [
+          // Background gradient - different for dark/light modes
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isDarkMode
+                    ? [
+                        AppColors.backgroundColor,
+                        Color(0xFF0A1A0F), // Very dark green-black
+                        Color(0xFF102213), // Dark green-black
+                        Color(0xFF152A18), // Medium dark green
+                      ]
+                    : [
+                        Colors.white,
+                        Color(0xFFF8FAF8), // Very light green-white
+                        Color(0xFFF5F8F5), // Light green-white 
+                        Color(0xFFF0F5F0), // Subtle light green
                       ],
-                    ),
-                  ),
+                stops: const [0.0, 0.3, 0.6, 1.0],
+              ),
+            ),
+          ),
+          // Hexagon pattern overlay
+          Opacity(
+            opacity: isDarkMode ? 0.04 : 0.08,
+            child: Container(
+              child: CustomPaint(
+                painter: HexagonPatternPainter(
+                  color: isDarkMode 
+                      ? AppColors.primaryColor.withOpacity(0.4)
+                      : AppColors.primaryColor.withOpacity(0.2),
+                  hexSize: 40,
+                  spacing: 70,
                 ),
-        ),
+                child: Container(),
+              ),
+            ),
+          ),
+          // Dot pattern overlay
+          Opacity(
+            opacity: isDarkMode ? 0.05 : 0.07,
+            child: Container(
+              child: CustomPaint(
+                painter: DotPatternPainter(
+                  color: isDarkMode 
+                      ? Colors.white.withOpacity(0.3)
+                      : AppColors.primaryColor.withOpacity(0.2),
+                  dotSize: 1.0,
+                  spacing: 15,
+                ),
+                child: Container(),
+              ),
+            ),
+          ),
+          // Subtle diagonal line overlay
+          Opacity(
+            opacity: isDarkMode ? 0.02 : 0.04,
+            child: Container(
+              child: CustomPaint(
+                painter: DiagonalLinePainter(
+                  color: isDarkMode
+                      ? Colors.lightGreen.withOpacity(0.2)
+                      : AppColors.primaryColor.withOpacity(0.1),
+                  lineWidth: 0.5,
+                  spacing: 50,
+                ),
+                child: Container(),
+              ),
+            ),
+          ),
+          // Main content
+          SafeArea(
+            child: NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) {
+                return [
+                  _buildAnimatedAppBar(innerBoxIsScrolled, isDarkMode),
+                ];
+              },
+              body: _error != null
+                  ? _buildErrorView()
+                  : RefreshIndicator(
+                      onRefresh: _fetchData,
+                      color: AppColors.accentTeal,
+                      backgroundColor: AppColors.cardColor,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Welcome Header with animation
+                            _buildWelcomeHeader(),
+                            
+                            // Search Cards - Two big tiles for location and category search
+                            _buildSearchCardsSection(),
+                            
+                            const SizedBox(height: 20),
+                            
+                            // Featured Stores Section
+                            _buildFeaturedStoresSection(),
+                            
+                            // Featured Discounts Section (only shows data from Contentful)
+                            _buildFeaturedDiscountsSection(),
+                            
+                            // Categories Section
+                            _buildCategoriesSection(),
+                            
+                            const SizedBox(height: 24),
+                          ],
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+        ],
       ),
       
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Use this for testing images
-          _testImageLoading();
-        },
-        backgroundColor: AppColors.accentMagenta,
-        tooltip: 'Test Images',
-        child: const Icon(Icons.image),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.primaryColor,
+              AppColors.secondaryColor,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primaryColor.withOpacity(0.3),
+              offset: const Offset(0, 3),
+              blurRadius: 6,
+            )
+          ],
+        ),
+        child: FloatingActionButton(
+          onPressed: () {
+            // Use this for testing images
+            _testImageLoading();
+          },
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          tooltip: 'Test Images',
+          child: const Icon(Icons.image),
+        ),
       ),
     );
   }
 
-  Widget _buildAnimatedAppBar(bool innerBoxIsScrolled) {
+  Widget _buildAnimatedAppBar(bool innerBoxIsScrolled, bool isDarkMode) {
     final appBar = SliverAppBar(
-      expandedHeight: 70.0,
+      expandedHeight: 80.0,
       floating: true,
       pinned: true,
       snap: true,
@@ -325,15 +429,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              const Color(0xFF1B5E20), // Dark Green
-              const Color(0xFF2E7D32), // Slightly lighter Dark Green
+              AppColors.primaryColor,
+              Color(0xFF388E3C), // Darker green
             ],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
           borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primaryColor.withOpacity(0.3),
+              offset: const Offset(0, 2),
+              blurRadius: 6,
+            )
+          ],
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         child: const Row(
           children: [
             Icon(
@@ -347,7 +458,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                fontSize: 20,
+                fontSize: 22,
                 letterSpacing: 0.5,
               ),
             ),
@@ -355,28 +466,48 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ),
       ),
       elevation: 0,
-      backgroundColor: innerBoxIsScrolled ? AppColors.backgroundColor : Colors.transparent,
+      backgroundColor: Colors.transparent,
       actions: [
         IconButton(
-          icon: const Icon(Icons.notifications_outlined),
-          color: Color(0xFF1B5E20), // Dark Green to match gradient
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primaryColor.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.notifications_outlined,
+              color: isDarkMode ? Colors.white : Colors.white,
+              size: 22,
+            ),
+          ),
           onPressed: () {
             // Navigate to notifications
           },
         ),
         IconButton(
-          icon: const Icon(Icons.logout),
-          color: Color(0xFF2E7D32), // Slightly lighter Dark Green to match gradient
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primaryColor.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.logout,
+              color: isDarkMode ? Colors.white : Colors.white,
+              size: 22,
+            ),
+          ),
           onPressed: () async {
             // Sign out using the context provider
             final authService = Provider.of<AuthService>(context, listen: false);
             await authService.signOut();
           },
         ),
+        const SizedBox(width: 8),
       ],
     );
     
-    // Return the SliverAppBar directly instead of trying to animate it
     return appBar;
   }
   
@@ -420,28 +551,66 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget _buildWelcomeHeader() {
     final user = Provider.of<AuthService>(context).currentUser;
     final greeting = _getGreeting();
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
-    return Container(
+    final container = Container(
       margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? AppColors.cardColor : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDarkMode ? 0.1 : 0.05),
+            offset: const Offset(0, 4),
+            blurRadius: 10,
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '$greeting, ${user?.displayName?.split(' ').first ?? 'User'}',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.waving_hand_rounded,
+                  color: AppColors.primaryColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '$greeting, ${user?.displayName?.split(' ').first ?? 'User'}',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             'Discover the best deals from your favorite stores',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.textSecondaryColor,
+              color: isDarkMode ? AppColors.textSecondaryColor : Colors.black54,
+              height: 1.4,
             ),
           ),
         ],
       ),
     );
+    
+    return container.animate()
+      .fadeIn(duration: const Duration(milliseconds: 350))
+      .slideY(begin: 0.2, end: 0);
   }
   
   Widget _buildSearchCardsSection() {
@@ -483,150 +652,119 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     required int delay,
     required bool isLarge,
   }) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        splashColor: color.withOpacity(0.1),
-        highlightColor: color.withOpacity(0.05),
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
+    final cardWidget = AnimationUtils.withPressEffect(
+      onTap: onTap,
+      child: Card(
+        elevation: 8,
+        shadowColor: color.withOpacity(0.3),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
         child: Container(
           height: isLarge ? 130 : null,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(24),
             gradient: LinearGradient(
               colors: [
-                AppColors.cardColor,
-                AppColors.cardColor,
-                color.withOpacity(0.1),
+                isDarkMode ? AppColors.cardColor : Colors.white,
+                isDarkMode ? AppColors.cardColor : Colors.white,
+                color.withOpacity(isDarkMode ? 0.2 : 0.1),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
           ),
-          padding: EdgeInsets.all(isLarge ? 16 : 12),
+          padding: const EdgeInsets.all(20),
           child: isLarge
               ? Row(
                   children: [
+                    // Animated icon
+                    Container(
+                      width: 64,
+                      height: 64,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: _buildSearchAnimatedIcon(animationType, color),
+                    ),
+                    const SizedBox(width: 16),
+                    
+                    // Title and subtitle
                     Expanded(
-                      flex: 3,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             title,
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: color,
+                            style: TextStyle(
                               fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: isDarkMode ? Colors.white : Colors.black87,
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            subtitle,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: color.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              animationType == 'location' ? 'Find Nearby Stores' : 'Browse Categories',
-                              style: TextStyle(
-                                color: color,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isDarkMode ? AppColors.textSecondaryColor : Colors.black54,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    // Simple icon instead of animation
+                    
+                    // Arrow icon
                     Container(
-                      width: 60,
-                      height: 60,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.2),
-                        shape: BoxShape.circle,
+                        color: color.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
-                        _getIconForType(animationType),
-                        size: 30,
+                        Icons.arrow_forward_rounded,
                         color: color,
+                        size: 20,
                       ),
                     ),
                   ],
                 )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Static icon instead of animation
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _getIconForType(animationType),
-                        size: 20,
-                        color: color,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Text content
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: color,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+              : const SizedBox(), // We only use the large variant for now
         ),
       ),
     );
+    
+    return cardWidget.animate(autoPlay: true)
+      .fadeIn(
+        delay: Duration(milliseconds: delay), 
+        duration: const Duration(milliseconds: 300)
+      );
   }
   
-  IconData _getIconForType(String type) {
-    switch (type) {
-      case 'location':
-        return Icons.location_on;
-      case 'search':
-        return Icons.search;
-      case 'discount':
-        return Icons.local_offer;
-      case 'fire':
-        return Icons.local_fire_department;
-      default:
-        return Icons.info;
-    }
+  Widget _buildSearchAnimatedIcon(String type, Color color) {
+    final IconData iconData = type == 'location' 
+      ? Icons.location_on_rounded 
+      : Icons.search_rounded;
+    
+    final iconWidget = Icon(
+      iconData,
+      color: color,
+      size: 32,
+    );
+    
+    return iconWidget.animate(
+      autoPlay: true,
+      onComplete: (controller) => controller.repeat(),
+    ).shimmer(
+      duration: const Duration(milliseconds: 2000),
+      delay: const Duration(milliseconds: 500),
+    );
   }
   
   Widget _buildFeaturedStoresSection() {
@@ -646,13 +784,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 ? _buildEmptyStateMessage('No featured stores available')
                 : SizedBox(
                     height: 120,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _featuredStores.length,
-                      itemBuilder: (context, index) {
-                        final store = _featuredStores[index];
-                        return _buildStoreCard(context, store, index);
-                      },
+                    child: AnimationLimiter(
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _featuredStores.length,
+                        itemBuilder: (context, index) {
+                          final store = _featuredStores[index];
+                          return _buildStoreCard(context, store, index);
+                        },
+                      ),
                     ),
                   ),
         const SizedBox(height: 24),
@@ -686,90 +826,100 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _buildStoreCard(BuildContext context, Store store, int index) {
     print('Building store card for: ${store.name}, logoUrl: ${store.logoUrl}');
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => StoreDetailScreen(store: store),
-          ),
-        );
-      },
-      child: Container(
-        width: 110,
-        margin: const EdgeInsets.only(right: 12),
-        decoration: BoxDecoration(
-          color: AppColors.cardColor,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Store logo
-            Container(
-              height: 70,
-              width: 70,
-              decoration: const BoxDecoration(
-                color: AppColors.surfaceColor,
-                shape: BoxShape.circle,
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: store.logoUrl != null && store.logoUrl!.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: store.logoUrl!,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => const Center(
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
-                          ),
-                        ),
-                      ),
-                      errorWidget: (context, url, error) {
-                        print('Error loading store image: $error for URL: $url');
-                        return const Icon(
-                          Icons.store,
-                          color: AppColors.accentMagenta,
-                          size: 30,
-                        );
-                      },
-                      // Add image format specific handling
-                      fadeInDuration: const Duration(milliseconds: 300),
-                      memCacheHeight: 140, // Optimize cache size
-                      memCacheWidth: 140,
-                    )
-                  : const Icon(
-                      Icons.store,
-                      color: AppColors.accentMagenta,
-                      size: 30,
-                    ),
-            ),
-            const SizedBox(height: 8),
-            // Store name
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(
-                store.name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
+    return AnimationConfiguration.staggeredGrid(
+      position: index,
+      duration: const Duration(milliseconds: 375),
+      columnCount: _featuredStores.length,
+      child: SlideAnimation(
+        horizontalOffset: 50.0,
+        child: FadeInAnimation(
+          child: AnimationUtils.withPressEffect(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => StoreDetailScreen(store: store),
                 ),
-                maxLines: 1,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
+              );
+            },
+            child: Container(
+              width: 110,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                color: AppColors.cardColor,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Store logo
+                  Container(
+                    height: 70,
+                    width: 70,
+                    decoration: const BoxDecoration(
+                      color: AppColors.surfaceColor,
+                      shape: BoxShape.circle,
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: store.logoUrl != null && store.logoUrl!.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: store.logoUrl!,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) {
+                              print('Error loading store image: $error for URL: $url');
+                              return const Icon(
+                                Icons.store,
+                                color: AppColors.accentMagenta,
+                                size: 30,
+                              );
+                            },
+                            // Add image format specific handling
+                            fadeInDuration: const Duration(milliseconds: 300),
+                            memCacheHeight: 140, // Optimize cache size
+                            memCacheWidth: 140,
+                          )
+                        : const Icon(
+                            Icons.store,
+                            color: AppColors.accentMagenta,
+                            size: 30,
+                          ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Store name
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      store.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -793,31 +943,61 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               color: AppColors.accentMagenta,
               delay: 300,
             ),
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _fetchData,
-              tooltip: 'Refresh discounts',
-              iconSize: 20,
-              color: AppColors.accentTeal,
+            AnimationUtils.withPressEffect(
+              scale: 0.9,
+              onTap: _fetchData,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.accentTeal.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.refresh,
+                  color: AppColors.accentTeal,
+                  size: 20,
+                ),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 12),
         _isDiscountsLoading
             ? _buildDiscountLoadingShimmer()
-            : Column(
-                children: List.generate(_featuredDiscounts.length, (index) {
-                  final discount = _featuredDiscounts[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: DiscountCard(
-                      key: ValueKey('discount_${discount.id}'),
-                      discount: discount,
-                      onTap: () => _navigateToDiscountDetail(discount),
-                      showAnimation: false,
-                    ),
-                  );
-                }),
+            : AnimationLimiter(
+                child: Column(
+                  children: List.generate(_featuredDiscounts.length, (index) {
+                    final discount = _featuredDiscounts[index];
+                    return AnimationConfiguration.staggeredList(
+                      position: index,
+                      duration: const Duration(milliseconds: 375),
+                      child: SlideAnimation(
+                        verticalOffset: 50.0,
+                        child: FadeInAnimation(
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: DiscountCard(
+                              key: ValueKey('discount_${discount.id}'),
+                              discount: discount,
+                              onTap: () => _navigateToDiscountDetail(discount),
+                              showAnimation: true, // Enable animations
+                              onFavorite: () {
+                                // Handle favorite toggle
+                                setState(() {
+                                  // Toggle favorite status locally
+                                  _featuredDiscounts[index] = discount.copyWith(
+                                    isFavorite: !discount.isFavorite,
+                                  );
+                                });
+                                // TODO: Save to backend or shared preferences
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
               ),
       ],
     );
@@ -1002,6 +1182,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     required Color color,
     required int delay,
   }) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Row(
       children: [
         Icon(
@@ -1014,6 +1196,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           title,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
+            color: isDarkMode ? Colors.white : Colors.black87,
           ),
         ),
       ],
@@ -1021,22 +1204,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   
   Widget _buildEmptyStateMessage(String message) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return SizedBox(
       height: 160,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.inbox,
               size: 48,
-              color: AppColors.textSecondaryColor,
+              color: isDarkMode ? AppColors.textSecondaryColor : Colors.black38,
             ),
             const SizedBox(height: 16),
             Text(
               message,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondaryColor,
+                color: isDarkMode ? AppColors.textSecondaryColor : Colors.black54,
               ),
             ),
           ],
@@ -1217,4 +1402,122 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       );
     }
   }
+}
+
+// Dot pattern painter for background effect
+class DotPatternPainter extends CustomPainter {
+  final Color color;
+  final double dotSize;
+  final double spacing;
+
+  DotPatternPainter({
+    required this.color,
+    required this.dotSize,
+    required this.spacing,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    for (double i = 0; i < size.width; i += spacing) {
+      for (double j = 0; j < size.height; j += spacing) {
+        canvas.drawCircle(
+          Offset(i, j),
+          dotSize,
+          paint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// Hexagon pattern painter for background effect
+class HexagonPatternPainter extends CustomPainter {
+  final Color color;
+  final double hexSize;
+  final double spacing;
+
+  HexagonPatternPainter({
+    required this.color,
+    required this.hexSize,
+    required this.spacing,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    for (double i = 0; i < size.width; i += spacing) {
+      for (double j = 0; j < size.height; j += spacing) {
+        drawHexagon(canvas, Offset(i, j), hexSize, paint);
+      }
+    }
+  }
+
+  void drawHexagon(Canvas canvas, Offset center, double size, Paint paint) {
+    final path = Path();
+    const int sides = 6;
+    final double angle = (Math.pi * 2) / sides;
+    final double startAngle = 0; // starting angle
+
+    // Move to the first point
+    path.moveTo(
+      center.dx + size * Math.cos(startAngle),
+      center.dy + size * Math.sin(startAngle),
+    );
+
+    // Draw lines to each corner
+    for (int i = 1; i <= sides; i++) {
+      double x = center.dx + size * Math.cos(startAngle + angle * i);
+      double y = center.dy + size * Math.sin(startAngle + angle * i);
+      path.lineTo(x, y);
+    }
+
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// Diagonal line pattern painter for background effect
+class DiagonalLinePainter extends CustomPainter {
+  final Color color;
+  final double lineWidth;
+  final double spacing;
+
+  DiagonalLinePainter({
+    required this.color,
+    required this.lineWidth,
+    required this.spacing,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = lineWidth
+      ..style = PaintingStyle.stroke;
+
+    for (double i = -size.height; i < size.width + size.height; i += spacing) {
+      canvas.drawLine(
+        Offset(i, 0),
+        Offset(i + size.height, size.height),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 } 

@@ -14,6 +14,8 @@ import 'utils/app_colors.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'providers/category_provider.dart';
 import 'providers/stores_provider.dart';
+import 'providers/theme_provider.dart';
+import 'widgets/animated_theme_wrapper.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 Future<void> main() async {
@@ -71,20 +73,29 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DiscountProvider()),
         ChangeNotifierProvider(create: (_) => CategoryProvider()),
         ChangeNotifierProvider(create: (_) => StoresProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: SplashScreen(
-        child: MaterialApp(
-          title: 'Chhar',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.darkTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: ThemeMode.dark,
-          home: const AuthWrapper(),
-          routes: {
-            '/login': (context) => const LoginScreen(),
-            '/main': (context) => const MainScreen(),
-          },
-        ),
+      child: Builder(
+        builder: (context) {
+          final themeProvider = Provider.of<ThemeProvider>(context);
+          
+          return SplashScreen(
+            child: AnimatedThemeWrapper(
+              child: MaterialApp(
+                title: 'Chhar',
+                debugShowCheckedModeBanner: false,
+                theme: ThemeProvider.lightTheme,
+                darkTheme: ThemeProvider.darkTheme,
+                themeMode: themeProvider.themeMode,
+                home: const AuthWrapper(),
+                routes: {
+                  '/login': (context) => const LoginScreen(),
+                  '/main': (context) => const MainScreen(),
+                },
+              ),
+            ),
+          );
+        }
       ),
     );
   }
